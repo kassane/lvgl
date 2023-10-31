@@ -7,14 +7,30 @@ pub fn build(b: *std.Build) !void {
     try std.fs.cwd().copyFile(".devcontainer/__lv_conf.h__", std.fs.cwd(), "lv_conf.h", .{});
 
     const shared = b.option(bool, "Shared", "Build shared libraries") orelse false;
-    const config = b.option(Setup, "config", "Select configuration") orelse .Core;
+    const config = b.option(Setup, "Config", "Build configuration") orelse .Core;
 
-    const liblvgl = b.addStaticLibrary(.{
-        .name = "lvgl",
-        .target = target,
-        .optimize = optimize,
-    });
-    if (shared) liblvgl.linkage = .dynamic;
+    const liblvgl = if (shared)
+        b.addSharedLibrary(.{
+            .name = "lvgl",
+            .target = target,
+            .optimize = optimize,
+            .version = .{
+                .major = 9,
+                .minor = 0,
+                .patch = 0,
+            },
+        })
+    else
+        b.addStaticLibrary(.{
+            .name = "lvgl",
+            .target = target,
+            .optimize = optimize,
+            .version = .{
+                .major = 9,
+                .minor = 0,
+                .patch = 0,
+            },
+        });
     liblvgl.addIncludePath(.{ .path = "." });
     liblvgl.addIncludePath(.{ .path = "src" });
     liblvgl.addCSourceFiles(switch (config) {
@@ -25,17 +41,23 @@ pub fn build(b: *std.Build) !void {
     }, &[_][]const u8{
         "-Wall",
         "-Wextra",
-        "-Wpedantic",
         "-Wno-format",
         "-Wno-unused-variable",
     });
+    liblvgl.pie = true;
+    switch (optimize) {
+        .Debug, .ReleaseSafe => liblvgl.bundle_compiler_rt = true,
+        else => liblvgl.strip = true,
+    }
     if (config == .SDL) {
         const sdl_dep = b.dependency("SDL", .{
             .target = target,
             .optimize = optimize,
         });
-        liblvgl.linkLibrary(sdl_dep.artifact("SDL2"));
-        for (sdl_dep.artifact("SDL2").include_dirs.items) |include| {
+        const SDL2 = sdl_dep.artifact("SDL2");
+        liblvgl.linkLibrary(SDL2);
+        if (shared) SDL2.force_pic = true;
+        for (SDL2.include_dirs.items) |include| {
             try liblvgl.include_dirs.append(include);
         }
     }

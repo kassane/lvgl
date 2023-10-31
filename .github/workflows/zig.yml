@@ -18,4 +18,4 @@ jobs:
         with:
           version: 0.11.0
       - name: Build Summary
-        run: zig build -Dconfig=SDL --summary all -freference-trace
+        run: zig build -DConfig=SDL --summary all -freference-trace -DShared
