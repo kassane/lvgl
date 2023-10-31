@@ -27,5 +27,7 @@ tests/report/
 .DS_Store
 .vscode
 *.bak
+zig-*
+lv_conf.h
 
 
