@@ -39,11 +39,6 @@ typedef struct {
     lv_coord_t y;
 } lv_point_t;
 
-typedef struct {
-    lv_value_precise_t x;
-    lv_value_precise_t y;
-} lv_point_precise_t;
-
 /** Represents an area of the screen.*/
 typedef struct {
     lv_coord_t x1;
@@ -53,8 +48,7 @@ typedef struct {
 } lv_area_t;
 
 /** Alignments*/
-
-enum _lv_align_t {
+enum {
     LV_ALIGN_DEFAULT = 0,
     LV_ALIGN_TOP_LEFT,
     LV_ALIGN_TOP_MID,
@@ -79,15 +73,9 @@ enum _lv_align_t {
     LV_ALIGN_OUT_RIGHT_MID,
     LV_ALIGN_OUT_RIGHT_BOTTOM,
 };
-
-#ifdef DOXYGEN
-typedef _lv_align_t lv_align_t;
-#else
 typedef uint8_t lv_align_t;
-#endif /*DOXYGEN*/
 
-
-enum _lv_dir_t {
+enum {
     LV_DIR_NONE     = 0x00,
     LV_DIR_LEFT     = (1 << 0),
     LV_DIR_RIGHT    = (1 << 1),
@@ -98,17 +86,7 @@ enum _lv_dir_t {
     LV_DIR_ALL      = LV_DIR_HOR | LV_DIR_VER,
 };
 
-#ifdef DOXYGEN
-typedef _lv_dir_t lv_dir_t;
-#else
 typedef uint8_t lv_dir_t;
-#endif /*DOXYGEN*/
-
-typedef struct  {
-    int32_t angle_prev;
-    int32_t sinma;
-    int32_t cosma;
-} lv_area_transform_cache_t;
 
 /**********************
  * GLOBAL PROTOTYPES
@@ -206,11 +184,11 @@ bool _lv_area_intersect(lv_area_t * res_p, const lv_area_t * a1_p, const lv_area
  * @param a2_p pointer to the second area
  * @return number of results (max 4) or -1 if no intersect
  */
-int8_t _lv_area_diff(lv_area_t res_p[], const lv_area_t * a1_p, const lv_area_t * a2_p);
+int8_t _lv_area_diff(lv_area_t * res_p, const lv_area_t * a1_p, const lv_area_t * a2_p);
 
 /**
  * Join two areas into a third which involves the other two
- * @param a_res_p pointer to an area, the result will be stored here
+ * @param res_p pointer to an area, the result will be stored here
  * @param a1_p pointer to the first area
  * @param a2_p pointer to the second area
  */
@@ -261,16 +239,13 @@ bool _lv_area_is_equal(const lv_area_t * a, const lv_area_t * b);
 
 /**
  * Align an area to an other
- * @param base an area where the other will be aligned
+ * @param base an are where the other will be aligned
  * @param to_align the area to align
  * @param align `LV_ALIGN_...`
- * @param ofs_x X offset
- * @param ofs_y Y offset
  */
 void lv_area_align(const lv_area_t * base, lv_area_t * to_align, lv_align_t align, lv_coord_t ofs_x, lv_coord_t ofs_y);
 
-void lv_point_transform(lv_point_t * p, int32_t angle, int32_t zoom_x, int32_t zoom_y, const lv_point_t * pivot,
-                        bool zoom_first);
+void lv_point_transform(lv_point_t * p, int32_t angle, int32_t zoom, const lv_point_t * pivot);
 
 /**********************
  *      MACROS
@@ -290,14 +265,15 @@ void lv_point_transform(lv_point_t * p, int32_t angle, int32_t zoom_x, int32_t z
 #define _LV_COORD_TYPE_SPEC     (1 << _LV_COORD_TYPE_SHIFT)
 #define _LV_COORD_TYPE_PX_NEG   (3 << _LV_COORD_TYPE_SHIFT)
 
-#define LV_COORD_IS_PX(x)       (_LV_COORD_TYPE(x) == _LV_COORD_TYPE_PX || _LV_COORD_TYPE(x) == _LV_COORD_TYPE_PX_NEG)
-#define LV_COORD_IS_SPEC(x)     (_LV_COORD_TYPE(x) == _LV_COORD_TYPE_SPEC)
+#define LV_COORD_IS_PX(x)       (_LV_COORD_TYPE(x) == _LV_COORD_TYPE_PX || \
+                                 _LV_COORD_TYPE(x) == _LV_COORD_TYPE_PX_NEG ? true : false)
+#define LV_COORD_IS_SPEC(x)     (_LV_COORD_TYPE(x) == _LV_COORD_TYPE_SPEC ? true : false)
 
 #define LV_COORD_SET_SPEC(x)    ((x) | _LV_COORD_TYPE_SPEC)
 
 /*Special coordinates*/
 #define LV_PCT(x)               (x < 0 ? LV_COORD_SET_SPEC(1000 - (x)) : LV_COORD_SET_SPEC(x))
-#define LV_COORD_IS_PCT(x)      ((LV_COORD_IS_SPEC(x) && _LV_COORD_PLAIN(x) <= 2000))
+#define LV_COORD_IS_PCT(x)      ((LV_COORD_IS_SPEC(x) && _LV_COORD_PLAIN(x) <= 2000) ? true : false)
 #define LV_COORD_GET_PCT(x)     (_LV_COORD_PLAIN(x) > 1000 ? 1000 - _LV_COORD_PLAIN(x) : _LV_COORD_PLAIN(x))
 #define LV_SIZE_CONTENT         LV_COORD_SET_SPEC(2001)
 
@@ -319,15 +295,6 @@ LV_EXPORT_CONST_INT(LV_COORD_MIN);
 static inline lv_coord_t lv_pct(lv_coord_t x)
 {
     return LV_PCT(x);
-}
-
-static inline lv_coord_t lv_pct_to_px(lv_coord_t v, lv_coord_t base)
-{
-    if(LV_COORD_IS_PCT(v)) {
-        return (LV_COORD_GET_PCT(v) * base) / 100;
-    }
-
-    return v;
 }
 
 #ifdef __cplusplus

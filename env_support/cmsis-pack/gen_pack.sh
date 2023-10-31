@@ -46,7 +46,6 @@ PACK_DIRS="
   ../../src
   ../../docs
   ../../demos
-  ../../env_support/pikascript
 "
 
 
@@ -54,6 +53,7 @@ PACK_DIRS="
 PACK_BASE_FILES="
   ../../LICENCE.txt
   ../../README.md
+  ../../README_zh.md
   ../../lvgl.h
   lv_conf_cmsis.h
   lv_cmsis_pack.txt

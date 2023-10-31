@@ -4,11 +4,28 @@
  */
 
 /**
- * Copyright 2023 NXP
+ * MIT License
  *
- * SPDX-License-Identifier: MIT
+ * Copyright 2022, 2023 NXP
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next paragraph)
+ * shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+ * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+ * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+ * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
  */
-
 
 /*********************
  *      INCLUDES
@@ -16,72 +33,67 @@
 
 #include "lv_draw_vglite.h"
 
-#if LV_USE_DRAW_VGLITE
+#if LV_USE_GPU_NXP_VG_LITE
+#include <math.h>
+#include "lv_draw_vglite_blend.h"
+#include "lv_draw_vglite_line.h"
+#include "lv_draw_vglite_rect.h"
+#include "lv_draw_vglite_arc.h"
 #include "lv_vglite_buf.h"
-#include "lv_vglite_utils.h"
 
-#include "../../../display/lv_display_private.h"
+#if LV_COLOR_DEPTH != 32
+    #include "../../../core/lv_refr.h"
+#endif
 
 /*********************
  *      DEFINES
  *********************/
 
-#define DRAW_UNIT_ID_VGLITE 2
-
-#if LV_USE_OS
-    #define VGLITE_TASK_BUF_SIZE 10
+/* Minimum area (in pixels) for VG-Lite blit/fill processing. */
+#ifndef LV_GPU_NXP_VG_LITE_SIZE_LIMIT
+    #define LV_GPU_NXP_VG_LITE_SIZE_LIMIT 5000
 #endif
 
 /**********************
  *      TYPEDEFS
  **********************/
 
-#if LV_USE_OS
-/**
- * Structure of pending vglite draw task
- */
-typedef struct _vglite_draw_task_t {
-    lv_draw_task_t * task;
-    bool flushed;
-} vglite_draw_tasks_t;
-#endif
-
 /**********************
  *  STATIC PROTOTYPES
  **********************/
 
-/*
- * Dispatch a task to the VGLite unit.
- * Return 1 if task was dispatched, 0 otherwise (task not supported).
- */
-static int32_t _vglite_dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer);
+static void lv_draw_vglite_init_buf(lv_draw_ctx_t * draw_ctx);
 
-/*
- * Evaluate a task and set the score and preferred VGLite unit.
- * Return 1 if task is preferred, 0 otherwise (task is not supported).
- */
-static int32_t _vglite_evaluate(lv_draw_unit_t * draw_unit, lv_draw_task_t * task);
+static void lv_draw_vglite_wait_for_finish(lv_draw_ctx_t * draw_ctx);
 
-#if LV_USE_OS
-    static void _vglite_render_thread_cb(void * ptr);
-#endif
+static void lv_draw_vglite_img_decoded(lv_draw_ctx_t * draw_ctx, const lv_draw_img_dsc_t * dsc,
+                                       const lv_area_t * coords, const uint8_t * map_p, lv_img_cf_t cf);
 
-static void _vglite_execute_drawing(lv_draw_vglite_unit_t * u);
+static void lv_draw_vglite_buffer_copy(lv_draw_ctx_t * draw_ctx,
+                                       void * dest_buf, lv_coord_t dest_stride, const lv_area_t * dest_area,
+                                       void * src_buf, lv_coord_t src_stride, const lv_area_t * src_area);
+
+static void lv_draw_vglite_blend(lv_draw_ctx_t * draw_ctx, const lv_draw_sw_blend_dsc_t * dsc);
+
+static void lv_draw_vglite_line(lv_draw_ctx_t * draw_ctx, const lv_draw_line_dsc_t * dsc, const lv_point_t * point1,
+                                const lv_point_t * point2);
+
+static void lv_draw_vglite_rect(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords);
+
+static lv_res_t lv_draw_vglite_bg(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords);
+
+static lv_res_t lv_draw_vglite_border(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc,
+                                      const lv_area_t * coords);
+
+static lv_res_t lv_draw_vglite_outline(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc,
+                                       const lv_area_t * coords);
+
+static void lv_draw_vglite_arc(lv_draw_ctx_t * draw_ctx, const lv_draw_arc_dsc_t * dsc, const lv_point_t * center,
+                               uint16_t radius, uint16_t start_angle, uint16_t end_angle);
 
 /**********************
  *  STATIC VARIABLES
  **********************/
-
-#if LV_USE_OS
-    /*
-    * Circular buffer to hold the queued and the flushed tasks.
-    * Two indexes, _head and _tail, are used to signal the beginning
-    * and the end of the valid tasks that are pending.
-    */
-    static vglite_draw_tasks_t _draw_task_buf[VGLITE_TASK_BUF_SIZE];
-    static volatile int _head = 0;
-    static volatile int _tail = 0;
-#endif
 
 /**********************
  *      MACROS
@@ -91,349 +103,455 @@ static void _vglite_execute_drawing(lv_draw_vglite_unit_t * u);
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_vglite_init(void)
+void lv_draw_vglite_ctx_init(lv_disp_drv_t * drv, lv_draw_ctx_t * draw_ctx)
 {
-    lv_draw_buf_vglite_init_handlers();
+    lv_draw_sw_init_ctx(drv, draw_ctx);
 
-    lv_draw_vglite_unit_t * draw_vglite_unit = lv_draw_create_unit(sizeof(lv_draw_vglite_unit_t));
-    draw_vglite_unit->base_unit.dispatch_cb = _vglite_dispatch;
-    draw_vglite_unit->base_unit.evaluate_cb = _vglite_evaluate;
+    lv_draw_vglite_ctx_t * vglite_draw_ctx = (lv_draw_sw_ctx_t *)draw_ctx;
+    vglite_draw_ctx->base_draw.init_buf = lv_draw_vglite_init_buf;
+    vglite_draw_ctx->base_draw.draw_line = lv_draw_vglite_line;
+    vglite_draw_ctx->base_draw.draw_arc = lv_draw_vglite_arc;
+    vglite_draw_ctx->base_draw.draw_rect = lv_draw_vglite_rect;
+    vglite_draw_ctx->base_draw.draw_img_decoded = lv_draw_vglite_img_decoded;
+    vglite_draw_ctx->blend = lv_draw_vglite_blend;
+    vglite_draw_ctx->base_draw.wait_for_finish = lv_draw_vglite_wait_for_finish;
+    vglite_draw_ctx->base_draw.buffer_copy = lv_draw_vglite_buffer_copy;
+}
 
-#if LV_USE_OS
-    lv_thread_init(&draw_vglite_unit->thread, LV_THREAD_PRIO_HIGH, _vglite_render_thread_cb, 8 * 1024, draw_vglite_unit);
-#endif
+void lv_draw_vglite_ctx_deinit(lv_disp_drv_t * drv, lv_draw_ctx_t * draw_ctx)
+{
+    lv_draw_sw_deinit_ctx(drv, draw_ctx);
 }
 
 /**********************
  *   STATIC FUNCTIONS
  **********************/
 
-static inline bool _vglite_cf_supported(lv_color_format_t cf)
+/**
+ * During rendering, LVGL might initializes new draw_ctxs and start drawing into
+ * a separate buffer (called layer). If the content to be rendered has "holes",
+ * e.g. rounded corner, LVGL temporarily sets the disp_drv.screen_transp flag.
+ * It means the renderers should draw into an ARGB buffer.
+ * With 32 bit color depth it's not a big problem but with 16 bit color depth
+ * the target pixel format is ARGB8565 which is not supported by the GPU.
+ * In this case, the VG-Lite callbacks should fallback to SW rendering.
+ */
+static inline bool need_argb8565_support()
 {
-    // Add here the platform specific code for supported formats.
+#if LV_COLOR_DEPTH != 32
+    lv_disp_t * disp = _lv_refr_get_disp_refreshing();
 
-    bool is_cf_unsupported = (cf == LV_COLOR_FORMAT_RGB565A8 || cf == LV_COLOR_FORMAT_RGB888);
-
-    return (!is_cf_unsupported);
-}
-
-static int32_t _vglite_evaluate(lv_draw_unit_t * u, lv_draw_task_t * t)
-{
-    LV_UNUSED(u);
-
-    switch(t->type) {
-        case LV_DRAW_TASK_TYPE_FILL:
-            if(t->preference_score > 80) {
-                t->preference_score = 80;
-                t->preferred_draw_unit_id = DRAW_UNIT_ID_VGLITE;
-            }
-            return 1;
-
-        case LV_DRAW_TASK_TYPE_LINE:
-        case LV_DRAW_TASK_TYPE_ARC:
-            if(t->preference_score > 90) {
-                t->preference_score = 90;
-                t->preferred_draw_unit_id = DRAW_UNIT_ID_VGLITE;
-            }
-            return 1;
-
-        case LV_DRAW_TASK_TYPE_LABEL:
-            if(t->preference_score > 95) {
-                t->preference_score = 95;
-                t->preferred_draw_unit_id = DRAW_UNIT_ID_VGLITE;
-            }
-            return 1;
-
-        case LV_DRAW_TASK_TYPE_BORDER: {
-                const lv_draw_border_dsc_t * draw_dsc = (lv_draw_border_dsc_t *) t->draw_dsc;
-
-                if(draw_dsc->side != (lv_border_side_t)LV_BORDER_SIDE_FULL)
-                    return 0;
-
-                if(t->preference_score > 90) {
-                    t->preference_score = 90;
-                    t->preferred_draw_unit_id = DRAW_UNIT_ID_VGLITE;
-                }
-                return 1;
-            }
-
-        case LV_DRAW_TASK_TYPE_BG_IMG: {
-                const lv_draw_bg_image_dsc_t * draw_dsc = (lv_draw_bg_image_dsc_t *) t->draw_dsc;
-                lv_image_src_t src_type = lv_image_src_get_type(draw_dsc->src);
-
-                if(src_type != LV_IMAGE_SRC_SYMBOL) {
-                    bool has_recolor = (draw_dsc->recolor_opa != LV_OPA_TRANSP);
-
-                    if(has_recolor
-                       || (!_vglite_cf_supported(draw_dsc->img_header.cf))
-                       || (!vglite_buf_aligned(draw_dsc->src, draw_dsc->img_header.stride, draw_dsc->img_header.cf))
-                      )
-                        return 0;
-                }
-
-                if(t->preference_score > 80) {
-                    t->preference_score = 80;
-                    t->preferred_draw_unit_id = DRAW_UNIT_ID_VGLITE;
-                }
-                return 1;
-            }
-
-        case LV_DRAW_TASK_TYPE_LAYER: {
-                const lv_draw_image_dsc_t * draw_dsc = (lv_draw_image_dsc_t *) t->draw_dsc;
-                lv_layer_t * layer_to_draw = (lv_layer_t *)draw_dsc->src;
-                lv_draw_buf_t * draw_buf = &layer_to_draw->draw_buf;
-
-                bool has_recolor = (draw_dsc->recolor_opa != LV_OPA_TRANSP);
-
-                if(has_recolor
-                   || (!_vglite_cf_supported(draw_buf->color_format))
-                  )
-                    return 0;
-
-                if(t->preference_score > 80) {
-                    t->preference_score = 80;
-                    t->preferred_draw_unit_id = DRAW_UNIT_ID_VGLITE;
-                }
-                return 1;
-            }
-
-        case LV_DRAW_TASK_TYPE_IMAGE: {
-                lv_draw_image_dsc_t * draw_dsc = (lv_draw_image_dsc_t *) t->draw_dsc;
-                const lv_image_dsc_t * img_dsc = draw_dsc->src;
-
-                bool has_recolor = (draw_dsc->recolor_opa != LV_OPA_TRANSP);
-#if VGLITE_BLIT_SPLIT_ENABLED
-                bool has_transform = (draw_dsc->angle != 0 || draw_dsc->zoom != LV_ZOOM_NONE);
+    if(disp->driver->screen_transp == 1)
+        return true;
 #endif
 
-                if(has_recolor
-#if VGLITE_BLIT_SPLIT_ENABLED
-                   || has_transform
-#endif
-                   || (!_vglite_cf_supported(img_dsc->header.cf))
-                   || (!vglite_buf_aligned(img_dsc->data, img_dsc->header.stride, img_dsc->header.cf))
-                  )
-                    return 0;
+    return false;
+}
 
-                if(t->preference_score > 80) {
-                    t->preference_score = 80;
-                    t->preferred_draw_unit_id = DRAW_UNIT_ID_VGLITE;
-                }
-                return 1;
-            }
-        default:
-            return 0;
+static void lv_draw_vglite_init_buf(lv_draw_ctx_t * draw_ctx)
+{
+    lv_gpu_nxp_vglite_init_buf(draw_ctx->buf, draw_ctx->buf_area, lv_area_get_width(draw_ctx->buf_area));
+}
+
+static void lv_draw_vglite_wait_for_finish(lv_draw_ctx_t * draw_ctx)
+{
+    vg_lite_finish();
+
+    lv_draw_sw_wait_for_finish(draw_ctx);
+}
+
+static void lv_draw_vglite_blend(lv_draw_ctx_t * draw_ctx, const lv_draw_sw_blend_dsc_t * dsc)
+{
+    if(dsc->opa <= (lv_opa_t)LV_OPA_MIN)
+        return;
+
+    if(need_argb8565_support()) {
+        lv_draw_sw_blend_basic(draw_ctx, dsc);
+        return;
     }
 
-    return 0;
-}
+    lv_area_t blend_area;
+    if(!_lv_area_intersect(&blend_area, dsc->blend_area, draw_ctx->clip_area))
+        return; /*Fully clipped, nothing to do*/
 
-static int32_t _vglite_dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
-{
-    lv_draw_vglite_unit_t * draw_vglite_unit = (lv_draw_vglite_unit_t *) draw_unit;
+    lv_area_move(&blend_area, -draw_ctx->buf_area->x1, -draw_ctx->buf_area->y1);
 
-    /* Return immediately if it's busy with draw task. */
-    if(draw_vglite_unit->task_act)
-        return 0;
+    bool done = false;
+    /*Fill/Blend only non masked, normal blended*/
+    if(dsc->mask_buf == NULL && dsc->blend_mode == LV_BLEND_MODE_NORMAL &&
+       lv_area_get_size(&blend_area) >= LV_GPU_NXP_VG_LITE_SIZE_LIMIT) {
+        const lv_color_t * src_buf = dsc->src_buf;
 
-    /* Return if target buffer format is not supported.
-     *
-     * FIXME: Source format and destination format support is different!
-     */
-    if(!_vglite_cf_supported(layer->draw_buf.color_format))
-        return 0;
-
-    /* Try to get an ready to draw. */
-    lv_draw_task_t * t = lv_draw_get_next_available_task(layer, NULL, DRAW_UNIT_ID_VGLITE);
-
-    /* Return 0 is no selection, some tasks can be supported by other units. */
-    if(t == NULL || t->preferred_draw_unit_id != DRAW_UNIT_ID_VGLITE)
-        return 0;
-
-    void * buf = lv_draw_layer_alloc_buf(layer);
-    if(buf == NULL)
-        return -1;
-
-    t->state = LV_DRAW_TASK_STATE_IN_PROGRESS;
-    draw_vglite_unit->base_unit.target_layer = layer;
-    draw_vglite_unit->base_unit.clip_area = &t->clip_area;
-    draw_vglite_unit->task_act = t;
-
-#if LV_USE_OS
-    /* Let the render thread work. */
-    lv_thread_sync_signal(&draw_vglite_unit->sync);
-#else
-    _vglite_execute_drawing(draw_vglite_unit);
-
-    draw_vglite_unit->task_act->state = LV_DRAW_TASK_STATE_READY;
-    draw_vglite_unit->task_act = NULL;
-
-    /* The draw unit is free now. Request a new dispatching as it can get a new task. */
-    lv_draw_dispatch_request();
-#endif
-
-    return 1;
-}
-
-static void _vglite_execute_drawing(lv_draw_vglite_unit_t * u)
-{
-    lv_draw_task_t * t = u->task_act;
-    lv_draw_unit_t * draw_unit = (lv_draw_unit_t *)u;
-
-    /* Set target buffer */
-    lv_layer_t * layer = draw_unit->target_layer;
-    vglite_set_dest_buf(&layer->draw_buf);
-
-    /* Invalidate cache */
-    lv_draw_buf_invalidate_cache(&layer->draw_buf, (const char *)&t->area);
-
-    switch(t->type) {
-        case LV_DRAW_TASK_TYPE_LABEL:
-            lv_draw_vglite_label(draw_unit, t->draw_dsc, &t->area);
-            break;
-        case LV_DRAW_TASK_TYPE_FILL:
-            lv_draw_vglite_fill(draw_unit, t->draw_dsc, &t->area);
-            break;
-        case LV_DRAW_TASK_TYPE_BORDER:
-            lv_draw_vglite_border(draw_unit, t->draw_dsc, &t->area);
-            break;
-        case LV_DRAW_TASK_TYPE_BG_IMG:
-            lv_draw_vglite_bg_img(draw_unit, t->draw_dsc, &t->area);
-            break;
-        case LV_DRAW_TASK_TYPE_IMAGE:
-            lv_draw_vglite_img(draw_unit, t->draw_dsc, &t->area);
-            break;
-        case LV_DRAW_TASK_TYPE_ARC:
-            lv_draw_vglite_arc(draw_unit, t->draw_dsc, &t->area);
-            break;
-        case LV_DRAW_TASK_TYPE_LINE:
-            lv_draw_vglite_line(draw_unit, t->draw_dsc);
-            break;
-        case LV_DRAW_TASK_TYPE_LAYER:
-            lv_draw_vglite_layer(draw_unit, t->draw_dsc, &t->area);
-            break;
-        default:
-            break;
-    }
-
-#if LV_USE_PARALLEL_DRAW_DEBUG
-    /* Layers manage it for themselves. */
-    if(t->type != LV_DRAW_TASK_TYPE_LAYER) {
-        lv_area_t draw_area;
-        if(!_lv_area_intersect(&draw_area, &t->area, u->base_unit.clip_area))
-            return;
-
-        int32_t idx = 0;
-        lv_disp_t * disp = _lv_refr_get_disp_refreshing();
-        lv_draw_unit_t * draw_unit_tmp = disp->draw_unit_head;
-        while(draw_unit_tmp != (lv_draw_unit_t *)u) {
-            draw_unit_tmp = draw_unit_tmp->next;
-            idx++;
-        }
-        lv_draw_rect_dsc_t rect_dsc;
-        lv_draw_rect_dsc_init(&rect_dsc);
-        rect_dsc.bg_color = lv_palette_main(idx % _LV_PALETTE_LAST);
-        rect_dsc.border_color = rect_dsc.bg_color;
-        rect_dsc.bg_opa = LV_OPA_10;
-        rect_dsc.border_opa = LV_OPA_80;
-        rect_dsc.border_width = 1;
-        lv_draw_vglite_rect((lv_draw_unit_t *)u, &rect_dsc, &draw_area);
-
-        lv_point_t txt_size;
-        lv_txt_get_size(&txt_size, "W", LV_FONT_DEFAULT, 0, 0, 100, LV_TEXT_FLAG_NONE);
-
-        lv_area_t txt_area;
-        txt_area.x1 = draw_area.x1;
-        txt_area.y1 = draw_area.y1;
-        txt_area.x2 = draw_area.x1 + txt_size.x - 1;
-        txt_area.y2 = draw_area.y1 + txt_size.y - 1;
-
-        lv_draw_rect_dsc_init(&rect_dsc);
-        rect_dsc.bg_color = lv_color_white();
-        lv_draw_vglite_rect((lv_draw_unit_t *)u, &rect_dsc, &txt_area);
-
-        char buf[8];
-        lv_snprintf(buf, sizeof(buf), "%d", idx);
-        lv_draw_label_dsc_t label_dsc;
-        lv_draw_label_dsc_init(&label_dsc);
-        label_dsc.color = lv_color_black();
-        label_dsc.text = buf;
-        lv_draw_vglite_label((lv_draw_unit_t *)u, &label_dsc, &txt_area);
-    }
-#endif
-}
-
-#if LV_USE_OS
-static inline void _vglite_queue_task(lv_draw_task_t * task_act)
-{
-    _draw_task_buf[_tail].task = task_act;
-    _draw_task_buf[_tail].flushed = false;
-    _tail = (_tail + 1) % VGLITE_TASK_BUF_SIZE;
-}
-
-static inline void _vglite_signal_task_ready(lv_draw_task_t * task_act)
-{
-    if(vglite_cmd_buf_is_flushed()) {
-        int end = (_head < _tail) ? _tail : _tail + VGLITE_TASK_BUF_SIZE;
-
-        for(int i = _head; i < end; i++) {
-            /* Previous flushed tasks are ready now. */
-            if(_draw_task_buf[i % VGLITE_TASK_BUF_SIZE].flushed) {
-                lv_draw_task_t * task = _draw_task_buf[i % VGLITE_TASK_BUF_SIZE].task;
-
-                /* Signal the ready state to dispatcher. */
-                task->state = LV_DRAW_TASK_STATE_READY;
-                _head = (_head + 1) % VGLITE_TASK_BUF_SIZE;
-                /* No need to cleanup the tasks in buffer as we advance with the _head. */
-            }
-            else {
-                /* Those tasks have been flushed now. */
-                _draw_task_buf[i % VGLITE_TASK_BUF_SIZE].flushed = true;
-            }
-        }
-    }
-
-    if(task_act)
-        LV_ASSERT_MSG(_tail != _head, "VGLite task buffer full.");
-}
-
-static void _vglite_render_thread_cb(void * ptr)
-{
-    lv_draw_vglite_unit_t * u = ptr;
-
-    lv_thread_sync_init(&u->sync);
-
-    while(1) {
-        /*
-         * Wait for sync if no task received or _draw_task_buf is empty.
-         * The thread will have to run as much as there are pending tasks.
-         */
-        while(u->task_act == NULL && _head == _tail) {
-            lv_thread_sync_wait(&u->sync);
-        }
-
-        if(u->task_act) {
-            _vglite_queue_task((void *)u->task_act);
-
-            _vglite_execute_drawing(u);
+        if(src_buf == NULL) {
+            done = (lv_gpu_nxp_vglite_fill(&blend_area, dsc->color, dsc->opa) == LV_RES_OK);
+            if(!done)
+                VG_LITE_LOG_TRACE("VG-Lite fill failed. Fallback.");
         }
         else {
-            /*
-             * Update the flush status for last pending tasks.
-             * vg_lite_flush() will early return if there is nothing to submit.
-             */
-            vglite_run();
-        }
+            lv_area_t src_area;
+            src_area.x1 = blend_area.x1 - (dsc->blend_area->x1 - draw_ctx->buf_area->x1);
+            src_area.y1 = blend_area.y1 - (dsc->blend_area->y1 - draw_ctx->buf_area->y1);
+            src_area.x2 = src_area.x1 + lv_area_get_width(dsc->blend_area) - 1;
+            src_area.y2 = src_area.y1 + lv_area_get_height(dsc->blend_area) - 1;
+            lv_coord_t src_stride = lv_area_get_width(dsc->blend_area);
 
-        _vglite_signal_task_ready((void *)u->task_act);
+#if VG_LITE_BLIT_SPLIT_ENABLED
+            lv_color_t * dest_buf = draw_ctx->buf;
+            lv_coord_t dest_stride = lv_area_get_width(draw_ctx->buf_area);
 
-        /* Cleanup. */
-        u->task_act = NULL;
-
-        /* The draw unit is free now. Request a new dispatching as it can get a new task. */
-        lv_draw_dispatch_request();
-    }
-}
+            done = (lv_gpu_nxp_vglite_blit_split(dest_buf, &blend_area, dest_stride,
+                                                 src_buf, &src_area, src_stride, dsc->opa) == LV_RES_OK);
+#else
+            done = (lv_gpu_nxp_vglite_blit(&blend_area, src_buf, &src_area, src_stride, dsc->opa) == LV_RES_OK);
 #endif
 
-#endif /*LV_USE_DRAW_VGLITE*/
+            if(!done)
+                VG_LITE_LOG_TRACE("VG-Lite blit failed. Fallback.");
+        }
+    }
+
+    if(!done)
+        lv_draw_sw_blend_basic(draw_ctx, dsc);
+}
+
+static void lv_draw_vglite_img_decoded(lv_draw_ctx_t * draw_ctx, const lv_draw_img_dsc_t * dsc,
+                                       const lv_area_t * coords, const uint8_t * map_p, lv_img_cf_t cf)
+{
+    if(dsc->opa <= (lv_opa_t)LV_OPA_MIN)
+        return;
+
+    if(need_argb8565_support()) {
+        lv_draw_sw_img_decoded(draw_ctx, dsc, coords, map_p, cf);
+        return;
+    }
+
+    const lv_color_t * src_buf = (const lv_color_t *)map_p;
+    if(!src_buf) {
+        lv_draw_sw_img_decoded(draw_ctx, dsc, coords, map_p, cf);
+        return;
+    }
+
+    lv_area_t rel_coords;
+    lv_area_copy(&rel_coords, coords);
+    lv_area_move(&rel_coords, -draw_ctx->buf_area->x1, -draw_ctx->buf_area->y1);
+
+    lv_area_t rel_clip_area;
+    lv_area_copy(&rel_clip_area, draw_ctx->clip_area);
+    lv_area_move(&rel_clip_area, -draw_ctx->buf_area->x1, -draw_ctx->buf_area->y1);
+
+    lv_area_t blend_area;
+    bool has_transform = dsc->angle != 0 || dsc->zoom != LV_IMG_ZOOM_NONE;
+
+    if(has_transform)
+        lv_area_copy(&blend_area, &rel_coords);
+    else if(!_lv_area_intersect(&blend_area, &rel_coords, &rel_clip_area))
+        return; /*Fully clipped, nothing to do*/
+
+    bool has_mask = lv_draw_mask_is_any(&blend_area);
+    bool has_recolor = (dsc->recolor_opa != LV_OPA_TRANSP);
+
+    bool done = false;
+    if(!has_mask && !has_recolor && !lv_img_cf_is_chroma_keyed(cf) &&
+       lv_area_get_size(&blend_area) >= LV_GPU_NXP_VG_LITE_SIZE_LIMIT
+#if LV_COLOR_DEPTH != 32
+       && !lv_img_cf_has_alpha(cf)
+#endif
+      ) {
+        lv_area_t src_area;
+        src_area.x1 = blend_area.x1 - (coords->x1 - draw_ctx->buf_area->x1);
+        src_area.y1 = blend_area.y1 - (coords->y1 - draw_ctx->buf_area->y1);
+        src_area.x2 = src_area.x1 + lv_area_get_width(coords) - 1;
+        src_area.y2 = src_area.y1 + lv_area_get_height(coords) - 1;
+        lv_coord_t src_stride = lv_area_get_width(coords);
+
+#if VG_LITE_BLIT_SPLIT_ENABLED
+        lv_color_t * dest_buf = draw_ctx->buf;
+        lv_coord_t dest_stride = lv_area_get_width(draw_ctx->buf_area);
+
+        if(has_transform)
+            /* VG-Lite blit split with transformation is not supported! */
+            done = false;
+        else
+            done = (lv_gpu_nxp_vglite_blit_split(dest_buf, &blend_area, dest_stride,
+                                                 src_buf, &src_area, src_stride, dsc->opa) == LV_RES_OK);
+#else
+        if(has_transform)
+            done = (lv_gpu_nxp_vglite_blit_transform(&blend_area, &rel_clip_area,
+                                                     src_buf, &src_area, src_stride, dsc) == LV_RES_OK);
+        else
+            done = (lv_gpu_nxp_vglite_blit(&blend_area, src_buf, &src_area, src_stride, dsc->opa) == LV_RES_OK);
+#endif
+
+        if(!done)
+            VG_LITE_LOG_TRACE("VG-Lite blit %sfailed. Fallback.", has_transform ? "transform " : "");
+    }
+
+    if(!done)
+        lv_draw_sw_img_decoded(draw_ctx, dsc, coords, map_p, cf);
+}
+
+static void lv_draw_vglite_buffer_copy(lv_draw_ctx_t * draw_ctx,
+                                       void * dest_buf, lv_coord_t dest_stride, const lv_area_t * dest_area,
+                                       void * src_buf, lv_coord_t src_stride, const lv_area_t * src_area)
+{
+    bool done = false;
+
+    if(lv_area_get_size(dest_area) >= LV_GPU_NXP_VG_LITE_SIZE_LIMIT) {
+        done = lv_gpu_nxp_vglite_buffer_copy(dest_buf, dest_area, dest_stride, src_buf, src_area, src_stride);
+        if(!done)
+            VG_LITE_LOG_TRACE("VG-Lite buffer copy failed. Fallback.");
+    }
+
+    if(!done)
+        lv_draw_sw_buffer_copy(draw_ctx, dest_buf, dest_stride, dest_area, src_buf, src_stride, src_area);
+}
+
+static void lv_draw_vglite_line(lv_draw_ctx_t * draw_ctx, const lv_draw_line_dsc_t * dsc, const lv_point_t * point1,
+                                const lv_point_t * point2)
+{
+    if(dsc->width == 0)
+        return;
+    if(dsc->opa <= (lv_opa_t)LV_OPA_MIN)
+        return;
+    if(point1->x == point2->x && point1->y == point2->y)
+        return;
+
+    if(need_argb8565_support()) {
+        lv_draw_sw_line(draw_ctx, dsc, point1, point2);
+        return;
+    }
+
+    lv_area_t rel_clip_area;
+    rel_clip_area.x1 = LV_MIN(point1->x, point2->x) - dsc->width / 2;
+    rel_clip_area.x2 = LV_MAX(point1->x, point2->x) + dsc->width / 2;
+    rel_clip_area.y1 = LV_MIN(point1->y, point2->y) - dsc->width / 2;
+    rel_clip_area.y2 = LV_MAX(point1->y, point2->y) + dsc->width / 2;
+
+    lv_area_t clipped_coords;
+    if(!_lv_area_intersect(&clipped_coords, &rel_clip_area, draw_ctx->clip_area))
+        return; /*Fully clipped, nothing to do*/
+
+    lv_area_move(&rel_clip_area, -draw_ctx->buf_area->x1, -draw_ctx->buf_area->y1);
+
+    lv_point_t rel_point1 = { point1->x - draw_ctx->buf_area->x1, point1->y - draw_ctx->buf_area->y1 };
+    lv_point_t rel_point2 = { point2->x - draw_ctx->buf_area->x1, point2->y - draw_ctx->buf_area->y1 };
+
+    bool done = false;
+    bool has_mask = lv_draw_mask_is_any(&rel_clip_area);
+
+    if(!has_mask) {
+        done = (lv_gpu_nxp_vglite_draw_line(&rel_point1, &rel_point2, &rel_clip_area, dsc) == LV_RES_OK);
+        if(!done)
+            VG_LITE_LOG_TRACE("VG-Lite draw line failed. Fallback.");
+    }
+
+    if(!done)
+        lv_draw_sw_line(draw_ctx, dsc, point1, point2);
+}
+
+static void lv_draw_vglite_rect(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords)
+{
+    if(need_argb8565_support()) {
+        lv_draw_sw_rect(draw_ctx, dsc, coords);
+        return;
+    }
+
+    lv_draw_rect_dsc_t vglite_dsc;
+
+    lv_memcpy(&vglite_dsc, dsc, sizeof(vglite_dsc));
+    vglite_dsc.bg_opa = 0;
+    vglite_dsc.bg_img_opa = 0;
+    vglite_dsc.border_opa = 0;
+    vglite_dsc.outline_opa = 0;
+#if LV_DRAW_COMPLEX
+    /* Draw the shadow with CPU */
+    lv_draw_sw_rect(draw_ctx, &vglite_dsc, coords);
+    vglite_dsc.shadow_opa = 0;
+#endif /*LV_DRAW_COMPLEX*/
+
+    /* Draw the background */
+    vglite_dsc.bg_opa = dsc->bg_opa;
+    if(lv_draw_vglite_bg(draw_ctx, &vglite_dsc, coords) != LV_RES_OK)
+        lv_draw_sw_rect(draw_ctx, &vglite_dsc, coords);
+    vglite_dsc.bg_opa = 0;
+
+    /* Draw the background image
+     * It will be done once draw_ctx->draw_img_decoded()
+     * callback gets called from lv_draw_sw_rect().
+     */
+    vglite_dsc.bg_img_opa = dsc->bg_img_opa;
+    lv_draw_sw_rect(draw_ctx, &vglite_dsc, coords);
+    vglite_dsc.bg_img_opa = 0;
+
+    /* Draw the border */
+    vglite_dsc.border_opa = dsc->border_opa;
+    if(lv_draw_vglite_border(draw_ctx, &vglite_dsc, coords) != LV_RES_OK)
+        lv_draw_sw_rect(draw_ctx, &vglite_dsc, coords);
+    vglite_dsc.border_opa = 0;
+
+    /* Draw the outline */
+    vglite_dsc.outline_opa = dsc->outline_opa;
+    if(lv_draw_vglite_outline(draw_ctx, &vglite_dsc, coords) != LV_RES_OK)
+        lv_draw_sw_rect(draw_ctx, &vglite_dsc, coords);
+}
+
+static lv_res_t lv_draw_vglite_bg(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords)
+{
+    if(dsc->bg_opa <= (lv_opa_t)LV_OPA_MIN)
+        return LV_RES_INV;
+
+    lv_area_t rel_coords;
+    lv_area_copy(&rel_coords, coords);
+
+    /*If the border fully covers make the bg area 1px smaller to avoid artifacts on the corners*/
+    if(dsc->border_width > 1 && dsc->border_opa >= (lv_opa_t)LV_OPA_MAX && dsc->radius != 0) {
+        rel_coords.x1 += (dsc->border_side & LV_BORDER_SIDE_LEFT) ? 1 : 0;
+        rel_coords.y1 += (dsc->border_side & LV_BORDER_SIDE_TOP) ? 1 : 0;
+        rel_coords.x2 -= (dsc->border_side & LV_BORDER_SIDE_RIGHT) ? 1 : 0;
+        rel_coords.y2 -= (dsc->border_side & LV_BORDER_SIDE_BOTTOM) ? 1 : 0;
+    }
+    lv_area_move(&rel_coords, -draw_ctx->buf_area->x1, -draw_ctx->buf_area->y1);
+
+    lv_area_t rel_clip_area;
+    lv_area_copy(&rel_clip_area, draw_ctx->clip_area);
+    lv_area_move(&rel_clip_area, -draw_ctx->buf_area->x1, -draw_ctx->buf_area->y1);
+
+    lv_area_t clipped_coords;
+    if(!_lv_area_intersect(&clipped_coords, &rel_coords, &rel_clip_area))
+        return LV_RES_OK; /*Fully clipped, nothing to do*/
+
+    bool has_mask = lv_draw_mask_is_any(&rel_coords);
+    lv_grad_dir_t grad_dir = dsc->bg_grad.dir;
+    lv_color_t bg_color = (grad_dir == (lv_grad_dir_t)LV_GRAD_DIR_NONE) ?
+                          dsc->bg_color : dsc->bg_grad.stops[0].color;
+    if(bg_color.full == dsc->bg_grad.stops[1].color.full)
+        grad_dir = LV_GRAD_DIR_NONE;
+
+    /*
+     * Most simple case: just a plain rectangle (no mask, no radius, no gradient)
+     * shall be handled by draw_ctx->blend().
+     *
+     * Complex case: gradient or radius but no mask.
+     */
+    if(!has_mask && ((dsc->radius != 0) || (grad_dir != (lv_grad_dir_t)LV_GRAD_DIR_NONE))) {
+        lv_res_t res = lv_gpu_nxp_vglite_draw_bg(&rel_coords, &rel_clip_area, dsc);
+        if(res != LV_RES_OK)
+            VG_LITE_LOG_TRACE("VG-Lite draw bg failed. Fallback.");
+
+        return res;
+    }
+
+    return LV_RES_INV;
+}
+
+static lv_res_t lv_draw_vglite_border(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc,
+                                      const lv_area_t * coords)
+{
+    if(dsc->border_opa <= (lv_opa_t)LV_OPA_MIN)
+        return LV_RES_INV;
+    if(dsc->border_width == 0)
+        return LV_RES_INV;
+    if(dsc->border_post)
+        return LV_RES_INV;
+    if(dsc->border_side != (lv_border_side_t)LV_BORDER_SIDE_FULL)
+        return LV_RES_INV;
+
+    lv_area_t rel_coords;
+    lv_coord_t border_width = dsc->border_width;
+
+    /* Move border inwards to align with software rendered border */
+    rel_coords.x1 = coords->x1 + ceil(border_width / 2.0f);
+    rel_coords.x2 = coords->x2 - floor(border_width / 2.0f);
+    rel_coords.y1 = coords->y1 + ceil(border_width / 2.0f);
+    rel_coords.y2 = coords->y2 - floor(border_width / 2.0f);
+
+    lv_area_move(&rel_coords, -draw_ctx->buf_area->x1, -draw_ctx->buf_area->y1);
+
+    lv_area_t rel_clip_area;
+    lv_area_copy(&rel_clip_area, draw_ctx->clip_area);
+    lv_area_move(&rel_clip_area, -draw_ctx->buf_area->x1, -draw_ctx->buf_area->y1);
+
+    lv_area_t clipped_coords;
+    if(!_lv_area_intersect(&clipped_coords, &rel_coords, &rel_clip_area))
+        return LV_RES_OK; /*Fully clipped, nothing to do*/
+
+    lv_res_t res = lv_gpu_nxp_vglite_draw_border_generic(&rel_coords, &rel_clip_area, dsc, true);
+    if(res != LV_RES_OK)
+        VG_LITE_LOG_TRACE("VG-Lite draw border failed. Fallback.");
+
+    return res;
+}
+
+static lv_res_t lv_draw_vglite_outline(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc,
+                                       const lv_area_t * coords)
+{
+    if(dsc->outline_opa <= (lv_opa_t)LV_OPA_MIN)
+        return LV_RES_INV;
+    if(dsc->outline_width == 0)
+        return LV_RES_INV;
+
+    /* Move outline outwards to align with software rendered outline */
+    lv_coord_t outline_pad = dsc->outline_pad - 1;
+    lv_area_t rel_coords;
+    rel_coords.x1 = coords->x1 - outline_pad - floor(dsc->outline_width / 2.0f);
+    rel_coords.x2 = coords->x2 + outline_pad + ceil(dsc->outline_width / 2.0f);
+    rel_coords.y1 = coords->y1 - outline_pad - floor(dsc->outline_width / 2.0f);
+    rel_coords.y2 = coords->y2 + outline_pad + ceil(dsc->outline_width / 2.0f);
+
+    lv_area_move(&rel_coords, -draw_ctx->buf_area->x1, -draw_ctx->buf_area->y1);
+
+    lv_area_t rel_clip_area;
+    lv_area_copy(&rel_clip_area, draw_ctx->clip_area);
+    lv_area_move(&rel_clip_area, -draw_ctx->buf_area->x1, -draw_ctx->buf_area->y1);
+
+    lv_area_t clipped_coords;
+    if(!_lv_area_intersect(&clipped_coords, &rel_coords, &rel_clip_area))
+        return LV_RES_OK; /*Fully clipped, nothing to do*/
+
+    lv_res_t res = lv_gpu_nxp_vglite_draw_border_generic(&rel_coords, &rel_clip_area, dsc, false);
+    if(res != LV_RES_OK)
+        VG_LITE_LOG_TRACE("VG-Lite draw outline failed. Fallback.");
+
+    return res;
+}
+
+static void lv_draw_vglite_arc(lv_draw_ctx_t * draw_ctx, const lv_draw_arc_dsc_t * dsc, const lv_point_t * center,
+                               uint16_t radius, uint16_t start_angle, uint16_t end_angle)
+{
+    bool done = false;
+
+#if LV_DRAW_COMPLEX
+    if(dsc->opa <= (lv_opa_t)LV_OPA_MIN)
+        return;
+    if(dsc->width == 0)
+        return;
+    if(start_angle == end_angle)
+        return;
+
+    if(need_argb8565_support()) {
+        lv_draw_sw_arc(draw_ctx, dsc, center, radius, start_angle, end_angle);
+        return;
+    }
+
+    lv_point_t rel_center = {center->x - draw_ctx->buf_area->x1, center->y - draw_ctx->buf_area->y1};
+
+    lv_area_t rel_clip_area;
+    lv_area_copy(&rel_clip_area, draw_ctx->clip_area);
+    lv_area_move(&rel_clip_area, -draw_ctx->buf_area->x1, -draw_ctx->buf_area->y1);
+
+    bool has_mask = lv_draw_mask_is_any(&rel_clip_area);
+
+    if(!has_mask) {
+        done = (lv_gpu_nxp_vglite_draw_arc(&rel_center, (int32_t)radius, (int32_t)start_angle, (int32_t)end_angle,
+                                           &rel_clip_area, dsc) == LV_RES_OK);
+        if(!done)
+            VG_LITE_LOG_TRACE("VG-Lite draw arc failed. Fallback.");
+    }
+
+#endif/*LV_DRAW_COMPLEX*/
+
+    if(!done)
+        lv_draw_sw_arc(draw_ctx, dsc, center, radius, start_angle, end_angle);
+}
+
+#endif /*LV_USE_GPU_NXP_VG_LITE*/

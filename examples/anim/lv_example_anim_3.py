@@ -14,12 +14,12 @@ class LvExampleAnim_3():
     #
     def __init__(self):
         # Create a container with grid
-        col_dsc = [lv.grid_fr(1), 200, lv.grid_fr(1), lv.GRID_TEMPLATE_LAST]
-        row_dsc = [30, 10, 10, lv.grid_fr(1),lv.GRID_TEMPLATE_LAST]
+        col_dsc = [lv.grid_fr(1), 200, lv.grid_fr(1), lv.GRID_TEMPLATE.LAST]
+        row_dsc = [30, 10, 10, lv.grid_fr(1),lv.GRID_TEMPLATE.LAST]
 
         self.p1 = 0
         self.p2 = 0
-        self.cont = lv.obj(lv.screen_active())
+        self.cont = lv.obj(lv.scr_act())
         self.cont.set_style_pad_all(2, lv.PART.MAIN)
         self.cont.set_style_pad_column(10, lv.PART.MAIN)
         self.cont.set_style_pad_row(10, lv.PART.MAIN)
@@ -42,7 +42,7 @@ class LvExampleAnim_3():
         self.anim_obj = lv.obj(par)
         self.anim_obj.set_size(30, 30)
         self.anim_obj.set_align(lv.ALIGN.TOP_LEFT)
-        self.anim_obj.remove_flag(lv.obj.FLAG.SCROLLABLE)
+        self.anim_obj.clear_flag(lv.obj.FLAG.SCROLLABLE)
         self.anim_obj.set_style_bg_color(lv.palette_main(lv.PALETTE.RED), lv.PART.MAIN)
         self.anim_obj.set_grid_cell(lv.GRID_ALIGN.START, 0, 1,lv.GRID_ALIGN.START, 0, 1)
 
@@ -59,21 +59,21 @@ class LvExampleAnim_3():
         self.p2_slider.set_range(0, 1024)
         self.p1_slider.set_style_pad_all(2, lv.PART.KNOB)
         self.p2_slider.set_style_pad_all(2, lv.PART.KNOB)
-        self.p1_slider.add_event(self.slider_event_cb, lv.EVENT.VALUE_CHANGED, None)
-        self.p2_slider.add_event(self.slider_event_cb, lv.EVENT.VALUE_CHANGED, None)
+        self.p1_slider.add_event_cb(self.slider_event_cb, lv.EVENT.VALUE_CHANGED, None)
+        self.p2_slider.add_event_cb(self.slider_event_cb, lv.EVENT.VALUE_CHANGED, None)
         self.p1_slider.set_grid_cell(lv.GRID_ALIGN.STRETCH, 1, 1,lv.GRID_ALIGN.START, 1, 1)
         self.p2_slider.set_grid_cell(lv.GRID_ALIGN.STRETCH, 1, 1,lv.GRID_ALIGN.START, 2, 1)
 
-        self.run_button = lv.button(par)
-        self.run_button.add_event(self.run_button_event_handler, lv.EVENT.CLICKED, None)
-        button_label = lv.label(self.run_button)
-        button_label.set_text(lv.SYMBOL.PLAY)
-        button_label.center()
-        self.run_button.set_grid_cell(lv.GRID_ALIGN.STRETCH, 2, 1,lv.GRID_ALIGN.STRETCH, 1, 2)
+        self.run_btn = lv.btn(par)
+        self.run_btn.add_event_cb(self.run_btn_event_handler, lv.EVENT.CLICKED, None)
+        btn_label = lv.label(self.run_btn)
+        btn_label.set_text(lv.SYMBOL.PLAY)
+        btn_label.center()
+        self.run_btn.set_grid_cell(lv.GRID_ALIGN.STRETCH, 2, 1,lv.GRID_ALIGN.STRETCH, 1, 2)
 
         self.chart = lv.chart(par)
         self.chart.set_style_pad_all(0, lv.PART.MAIN)
-        self.chart.set_style_size(0, 0, lv.PART.INDICATOR)
+        self.chart.set_style_size(0, lv.PART.INDICATOR)
         self.chart.set_type(lv.chart.TYPE.SCATTER)
         self.ser1 = self.chart.add_series(lv.palette_main(lv.PALETTE.RED), lv.chart.AXIS.PRIMARY_Y)
         self.chart.set_range(lv.chart.AXIS.PRIMARY_Y, 0, 1024)
@@ -89,7 +89,7 @@ class LvExampleAnim_3():
             self.chart.refresh()
 
     def slider_event_cb(self,e):
-        slider = e.get_target_obj()
+        slider = e.get_target()
 
         if slider == self.p1_slider:
             label = self.p1_label
@@ -103,7 +103,7 @@ class LvExampleAnim_3():
         self.refer_chart_cubic_bezier()
 
 
-    def run_button_event_handler(self,e):
+    def run_btn_event_handler(self,e):
 
         code = e.get_code()
         if code == lv.EVENT.CLICKED:

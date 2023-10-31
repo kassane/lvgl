@@ -16,7 +16,7 @@ void lv_example_dropdown_1(void)
 {
 
     /*Create a normal drop down list*/
-    lv_obj_t * dd = lv_dropdown_create(lv_screen_active());
+    lv_obj_t * dd = lv_dropdown_create(lv_scr_act());
     lv_dropdown_set_options(dd, "Apple\n"
                             "Banana\n"
                             "Orange\n"
@@ -29,7 +29,7 @@ void lv_example_dropdown_1(void)
                             "Nuts");
 
     lv_obj_align(dd, LV_ALIGN_TOP_MID, 0, 20);
-    lv_obj_add_event(dd, event_handler, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(dd, event_handler, LV_EVENT_ALL, NULL);
 }
 
 #endif

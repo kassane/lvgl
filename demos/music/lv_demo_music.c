@@ -103,6 +103,12 @@ static const uint32_t time_list[] = {
     2 * 60 + 19,
 };
 
+#if LV_DEMO_MUSIC_AUTO_PLAY
+    static lv_timer_t * auto_step_timer;
+#endif
+
+static lv_color_t original_screen_bg_color;
+
 /**********************
  *      MACROS
  **********************/
@@ -113,14 +119,31 @@ static const uint32_t time_list[] = {
 
 void lv_demo_music(void)
 {
-    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(0x343247), 0);
+    original_screen_bg_color = lv_obj_get_style_bg_color(lv_scr_act(), 0);
+    lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(0x343247), 0);
 
-    list = _lv_demo_music_list_create(lv_screen_active());
-    ctrl = _lv_demo_music_main_create(lv_screen_active());
+    list = _lv_demo_music_list_create(lv_scr_act());
+    ctrl = _lv_demo_music_main_create(lv_scr_act());
 
 #if LV_DEMO_MUSIC_AUTO_PLAY
-    lv_timer_create(auto_step_cb, 1000, NULL);
+    auto_step_timer = lv_timer_create(auto_step_cb, 1000, NULL);
 #endif
+}
+
+void lv_demo_music_close(void)
+{
+    /*Delete all aniamtions*/
+    lv_anim_del(NULL, NULL);
+
+#if LV_DEMO_MUSIC_AUTO_PLAY
+    lv_timer_del(auto_step_timer);
+#endif
+    _lv_demo_music_list_close();
+    _lv_demo_music_main_close();
+
+    lv_obj_clean(lv_scr_act());
+
+    lv_obj_set_style_bg_color(lv_scr_act(), original_screen_bg_color, 0);
 }
 
 const char * _lv_demo_music_get_title(uint32_t track_id)
@@ -225,7 +248,7 @@ static void auto_step_cb(lv_timer_t * t)
                 lv_obj_t * num = lv_label_create(bg);
                 lv_obj_set_style_text_font(num, font_large, 0);
 #if LV_USE_PERF_MONITOR
-                lv_label_set_text_fmt(num, "%" LV_PRIu32, lv_refr_get_fps_avg());
+                lv_label_set_text_fmt(num, "%d", lv_refr_get_fps_avg());
 #endif
                 lv_obj_align(num, LV_ALIGN_TOP_MID, 0, 120);
 
@@ -241,7 +264,7 @@ static void auto_step_cb(lv_timer_t * t)
                 break;
             }
         case 41:
-            lv_screen_load(lv_obj_create(NULL));
+            lv_scr_load(lv_obj_create(NULL));
             _lv_demo_music_pause();
             break;
     }

@@ -6,10 +6,9 @@
 /*********************
  *      INCLUDES
  *********************/
-#include "lv_assert.h"
 #include "lv_anim_timeline.h"
-#include "../stdlib/lv_mem.h"
-#include "../stdlib/lv_string.h"
+#include "lv_mem.h"
+#include "lv_assert.h"
 
 /*********************
  *      DEFINES
@@ -19,7 +18,18 @@
  *      TYPEDEFS
  **********************/
 
+/*Data of anim_timeline_dsc*/
+typedef struct {
+    lv_anim_t anim;
+    uint32_t start_time;
+} lv_anim_timeline_dsc_t;
 
+/*Data of anim_timeline*/
+struct _lv_anim_timeline_t {
+    lv_anim_timeline_dsc_t * anim_dsc;  /**< Dynamically allocated anim dsc array*/
+    uint32_t anim_dsc_cnt;              /**< The length of anim dsc array*/
+    bool reverse;                       /**< Reverse playback*/
+};
 
 /**********************
  *  STATIC PROTOTYPES
@@ -40,23 +50,23 @@ static void lv_anim_timeline_virtual_exec_cb(void * var, int32_t v);
 
 lv_anim_timeline_t * lv_anim_timeline_create(void)
 {
-    lv_anim_timeline_t * at = (lv_anim_timeline_t *)lv_malloc(sizeof(lv_anim_timeline_t));
+    lv_anim_timeline_t * at = (lv_anim_timeline_t *)lv_mem_alloc(sizeof(lv_anim_timeline_t));
 
     LV_ASSERT_MALLOC(at);
 
-    if(at) lv_memzero(at, sizeof(lv_anim_timeline_t));
+    if(at) lv_memset_00(at, sizeof(lv_anim_timeline_t));
 
     return at;
 }
 
-void lv_anim_timeline_delete(lv_anim_timeline_t * at)
+void lv_anim_timeline_del(lv_anim_timeline_t * at)
 {
     LV_ASSERT_NULL(at);
 
     lv_anim_timeline_stop(at);
 
-    lv_free(at->anim_dsc);
-    lv_free(at);
+    lv_mem_free(at->anim_dsc);
+    lv_mem_free(at);
 }
 
 void lv_anim_timeline_add(lv_anim_timeline_t * at, uint32_t start_time, lv_anim_t * a)
@@ -64,7 +74,7 @@ void lv_anim_timeline_add(lv_anim_timeline_t * at, uint32_t start_time, lv_anim_
     LV_ASSERT_NULL(at);
 
     at->anim_dsc_cnt++;
-    at->anim_dsc = lv_realloc(at->anim_dsc, at->anim_dsc_cnt * sizeof(lv_anim_timeline_dsc_t));
+    at->anim_dsc = lv_mem_realloc(at->anim_dsc, at->anim_dsc_cnt * sizeof(lv_anim_timeline_dsc_t));
 
     LV_ASSERT_MALLOC(at->anim_dsc);
 
@@ -111,7 +121,7 @@ void lv_anim_timeline_stop(lv_anim_timeline_t * at)
 
     for(uint32_t i = 0; i < at->anim_dsc_cnt; i++) {
         lv_anim_t * a = &(at->anim_dsc[i].anim);
-        lv_anim_delete(a->var, a->exec_cb);
+        lv_anim_del(a->var, a->exec_cb);
     }
 }
 

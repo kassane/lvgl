@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/sh
 
 # Install Linux package prerequisites needed for LVGL development
 # and testing. Some less-common development packages are not included
@@ -6,4 +6,4 @@
 #
 # Note: This script is run by the CI workflows.
 sudo apt update
-sudo apt install gcc python3 libpng-dev ruby-full gcovr cmake libjpeg-turbo8-dev
+sudo apt install gcc python3 libpng-dev ruby-full gcovr cmake

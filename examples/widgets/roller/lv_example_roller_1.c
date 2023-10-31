@@ -17,7 +17,7 @@ static void event_handler(lv_event_t * e)
  */
 void lv_example_roller_1(void)
 {
-    lv_obj_t * roller1 = lv_roller_create(lv_screen_active());
+    lv_obj_t * roller1 = lv_roller_create(lv_scr_act());
     lv_roller_set_options(roller1,
                           "January\n"
                           "February\n"
@@ -35,7 +35,7 @@ void lv_example_roller_1(void)
 
     lv_roller_set_visible_row_count(roller1, 4);
     lv_obj_center(roller1);
-    lv_obj_add_event(roller1, event_handler, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(roller1, event_handler, LV_EVENT_ALL, NULL);
 }
 
 #endif

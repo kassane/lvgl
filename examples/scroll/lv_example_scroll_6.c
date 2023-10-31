@@ -50,11 +50,11 @@ static void scroll_event_cb(lv_event_t * e)
  */
 void lv_example_scroll_6(void)
 {
-    lv_obj_t * cont = lv_obj_create(lv_screen_active());
+    lv_obj_t * cont = lv_obj_create(lv_scr_act());
     lv_obj_set_size(cont, 200, 200);
     lv_obj_center(cont);
     lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
-    lv_obj_add_event(cont, scroll_event_cb, LV_EVENT_SCROLL, NULL);
+    lv_obj_add_event_cb(cont, scroll_event_cb, LV_EVENT_SCROLL, NULL);
     lv_obj_set_style_radius(cont, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_clip_corner(cont, true, 0);
     lv_obj_set_scroll_dir(cont, LV_DIR_VER);
@@ -63,7 +63,7 @@ void lv_example_scroll_6(void)
 
     uint32_t i;
     for(i = 0; i < 20; i++) {
-        lv_obj_t * btn = lv_button_create(cont);
+        lv_obj_t * btn = lv_btn_create(cont);
         lv_obj_set_width(btn, lv_pct(100));
 
         lv_obj_t * label = lv_label_create(btn);
@@ -71,7 +71,7 @@ void lv_example_scroll_6(void)
     }
 
     /*Update the buttons position manually for first*/
-    lv_obj_send_event(cont, LV_EVENT_SCROLL, NULL);
+    lv_event_send(cont, LV_EVENT_SCROLL, NULL);
 
     /*Be sure the fist button is in the middle*/
     lv_obj_scroll_to_view(lv_obj_get_child(cont, 0), LV_ANIM_OFF);

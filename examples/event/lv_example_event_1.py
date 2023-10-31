@@ -5,20 +5,20 @@ class Event_1():
         # Add click event to a button
         #
 
-        button = lv.button(lv.screen_active())
-        button.set_size(100, 50)
-        button.center()
-        button.add_event(self.event_cb, lv.EVENT.CLICKED, None)
+        btn = lv.btn(lv.scr_act())
+        btn.set_size(100, 50)
+        btn.center()
+        btn.add_event_cb(self.event_cb, lv.EVENT.CLICKED, None)
 
-        label = lv.label(button)
+        label = lv.label(btn)
         label.set_text("Click me!")
         label.center()
 
     def event_cb(self,e):
         print("Clicked")
 
-        button = e.get_target_obj()
-        label = button.get_child(0)
+        btn = e.get_target()
+        label = btn.get_child(0)
         label.set_text(str(self.cnt))
         self.cnt += 1
 

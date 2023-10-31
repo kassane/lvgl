@@ -15,8 +15,6 @@ extern "C" {
  *********************/
 #include <stdint.h>
 #include <stdbool.h>
-#include "lv_obj_property.h"
-#include "../misc/lv_area.h"
 
 /*********************
  *      DEFINES
@@ -43,11 +41,6 @@ typedef enum {
     LV_OBJ_CLASS_GROUP_DEF_FALSE,
 } lv_obj_class_group_def_t;
 
-typedef enum {
-    LV_OBJ_CLASS_THEME_INHERITABLE_FALSE,    /**< Do not inherit theme from base class. */
-    LV_OBJ_CLASS_THEME_INHERITABLE_TRUE,
-} lv_obj_class_theme_inheritable_t;
-
 typedef void (*lv_obj_class_event_cb_t)(struct _lv_obj_class_t * class_p, struct _lv_event_t * e);
 /**
  * Describe the common methods of every object.
@@ -55,29 +48,18 @@ typedef void (*lv_obj_class_event_cb_t)(struct _lv_obj_class_t * class_p, struct
  */
 typedef struct _lv_obj_class_t {
     const struct _lv_obj_class_t * base_class;
-    /*class_p is the final class while obj->class_p is the class currently being [de]constructed.*/
     void (*constructor_cb)(const struct _lv_obj_class_t * class_p, struct _lv_obj_t * obj);
     void (*destructor_cb)(const struct _lv_obj_class_t * class_p, struct _lv_obj_t * obj);
-
-    /*class_p is the class in which event is being processed.*/
+#if LV_USE_USER_DATA
+    void * user_data;
+#endif
     void (*event_cb)(const struct _lv_obj_class_t * class_p,
                      struct _lv_event_t * e);  /**< Widget type specific event function*/
-
-#if LV_USE_OBJ_PROPERTY
-    uint32_t prop_index_start;
-    uint32_t prop_index_end;
-    const lv_property_ops_t * properties;
-    uint32_t properties_count;
-#endif
-
-    void * user_data;
-    const char * name;
     lv_coord_t width_def;
     lv_coord_t height_def;
     uint32_t editable : 2;             /**< Value from ::lv_obj_class_editable_t*/
     uint32_t group_def : 2;            /**< Value from ::lv_obj_class_group_def_t*/
     uint32_t instance_size : 16;
-    uint32_t theme_inheritable : 1;    /**< Value from ::lv_obj_class_theme_inheritable_t*/
 } lv_obj_class_t;
 
 /**********************

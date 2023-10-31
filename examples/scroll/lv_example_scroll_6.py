@@ -1,6 +1,6 @@
 def scroll_event_cb(e):
 
-    cont = e.get_target_obj()
+    cont = e.get_target()
 
     cont_a = lv.area_t()
     cont.get_coords(cont_a)
@@ -42,26 +42,26 @@ def scroll_event_cb(e):
 # Translate the object as they scroll
 #
 
-cont = lv.obj(lv.screen_active())
+cont = lv.obj(lv.scr_act())
 cont.set_size(200, 200)
 cont.center()
 cont.set_flex_flow(lv.FLEX_FLOW.COLUMN)
-cont.add_event(scroll_event_cb, lv.EVENT.SCROLL, None)
-cont.set_style_radius(lv.RADIUS_CIRCLE, 0)
+cont.add_event_cb(scroll_event_cb, lv.EVENT.SCROLL, None)
+cont.set_style_radius(lv.RADIUS.CIRCLE, 0)
 cont.set_style_clip_corner(True, 0)
 cont.set_scroll_dir(lv.DIR.VER)
 cont.set_scroll_snap_y(lv.SCROLL_SNAP.CENTER)
 cont.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
 
 for i in range(20):
-    button = lv.button(cont)
-    button.set_width(lv.pct(100))
+    btn = lv.btn(cont)
+    btn.set_width(lv.pct(100))
 
-    label = lv.label(button)
+    label = lv.label(btn)
     label.set_text("Button " + str(i))
 
     # Update the buttons position manually for first*
-    cont.send_event(lv.EVENT.SCROLL, None)
+    lv.event_send(cont, lv.EVENT.SCROLL, None)
 
     # Be sure the fist button is in the middle
     #lv.obj.scroll_to_view(cont.get_child(0), lv.ANIM.OFF)

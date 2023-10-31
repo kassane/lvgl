@@ -98,16 +98,18 @@
  *   GLOBAL FUNCTIONS
  **********************/
 
-/* When Arm Compilers using the MicroLib, provide an empty implementation for 
- * time() which is not included in the MicroLib 
- */
-#if defined(__IS_COMPILER_ARM_COMPILER__) && __IS_COMPILER_ARM_COMPILER__
-#	if defined(__MICROLIB)
+/* only arm compilers will use microLib that doesn't implement time() */
+#if defined(__MICROLIB)
 __attribute__((weak))
 _ARMABI time_t time(time_t * time)
 {
     return (time_t)(-1);
 }
-#	endif
 #endif
+
+/* when people don't want to use src/extra */
+__attribute__((weak))
+void lv_extra_init(void)
+{
+}
 

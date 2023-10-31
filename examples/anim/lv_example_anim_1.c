@@ -39,15 +39,15 @@ static void sw_event_cb(lv_event_t * e)
  */
 void lv_example_anim_1(void)
 {
-    lv_obj_t * label = lv_label_create(lv_screen_active());
+    lv_obj_t * label = lv_label_create(lv_scr_act());
     lv_label_set_text(label, "Hello animations!");
     lv_obj_set_pos(label, 100, 10);
 
 
-    lv_obj_t * sw = lv_switch_create(lv_screen_active());
+    lv_obj_t * sw = lv_switch_create(lv_scr_act());
     lv_obj_center(sw);
     lv_obj_add_state(sw, LV_STATE_CHECKED);
-    lv_obj_add_event(sw, sw_event_cb, LV_EVENT_VALUE_CHANGED, label);
+    lv_obj_add_event_cb(sw, sw_event_cb, LV_EVENT_VALUE_CHANGED, label);
 }
 
 #endif

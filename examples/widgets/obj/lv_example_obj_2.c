@@ -18,14 +18,14 @@ static void drag_event_handler(lv_event_t * e)
 
 
 /**
- * Make an object draggable.
+ * Make an object dragable.
  */
 void lv_example_obj_2(void)
 {
     lv_obj_t * obj;
-    obj = lv_obj_create(lv_screen_active());
+    obj = lv_obj_create(lv_scr_act());
     lv_obj_set_size(obj, 150, 100);
-    lv_obj_add_event(obj, drag_event_handler, LV_EVENT_PRESSING, NULL);
+    lv_obj_add_event_cb(obj, drag_event_handler, LV_EVENT_PRESSING, NULL);
 
     lv_obj_t * label = lv_label_create(obj);
     lv_label_set_text(label, "Drag me");
