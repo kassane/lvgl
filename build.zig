@@ -126,7 +126,6 @@ const src = &[_][]const u8{
     "src/font/lv_font.c",
     "src/font/lv_font_dejavu_16_persian_hebrew.c",
     "src/font/lv_font_fmt_txt.c",
-    "src/font/lv_font_loader.c",
     "src/font/lv_font_montserrat_10.c",
     "src/font/lv_font_montserrat_12.c",
     "src/font/lv_font_montserrat_14.c",
