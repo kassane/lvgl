@@ -34,6 +34,7 @@
  * - LV_STDLIB_BUILTIN:     LVGL's built in implementation
  * - LV_STDLIB_CLIB:        Standard C functions, like malloc, strlen, etc
  * - LV_STDLIB_MICROPYTHON: MicroPython implementation
+ * - LV_STDLIB_RTTHREAD:    RT-Thread implementation
  * - LV_STDLIB_CUSTOM:      Implement the functions externally
  */
 #define LV_USE_STDLIB_MALLOC    LV_STDLIB_BUILTIN
@@ -134,6 +135,8 @@
  * - LV_OS_PTHREAD
  * - LV_OS_FREERTOS
  * - LV_OS_CMSIS_RTOS2
+ * - LV_OS_RTTHREAD
+ * - LV_OS_WINDOWS
  * - LV_OS_CUSTOM */
 #define LV_USE_OS   LV_OS_NONE
 
@@ -316,8 +319,8 @@
  *should also appear on LVGL binding API such as Micropython.*/
 #define LV_EXPORT_CONST_INT(int_value) struct _silence_gcc_warning /*The default value just prevents GCC warning*/
 
-/*Extend the default -32k..32k coordinate range to -4M..4M by using int32_t for coordinates instead of int16_t*/
-#define LV_USE_LARGE_COORD 0
+/*Prefix all global extern data with this*/
+#define LV_ATTRIBUTE_EXTERN_DATA
 
 /* Use `float` as `lv_value_precise_t` */
 #define LV_USE_FLOAT            0
@@ -616,6 +619,9 @@
 /*Decode bin images to RAM*/
 #define LV_BIN_DECODER_RAM_LOAD 0
 
+/*RLE decoder library*/
+#define LV_USE_RLE 0
+
 /*QR code library*/
 #define LV_USE_QRCODE 0
 
@@ -651,6 +657,15 @@
 
 /*Rlottie library*/
 #define LV_USE_RLOTTIE 0
+
+/*Enable Vector Graphic APIs*/
+#define LV_USE_VECTOR_GRAPHIC  0
+
+/* Enable ThorVG (vector graphics library) from the src/libs folder */
+#define LV_USE_THORVG_INTERNAL 0
+
+/* Enable ThorVG by assuming that its installed and linked to the project */
+#define LV_USE_THORVG_EXTERNAL 0
 
 /*FFmpeg library for image decoding and playing videos
  *Supports all major image formats so do not enable other image decoder with it*/
@@ -756,9 +771,20 @@
 #if LV_USE_SDL
     #define LV_SDL_INCLUDE_PATH    <SDL2/SDL.h>
     #define LV_SDL_RENDER_MODE     LV_DISPLAY_RENDER_MODE_DIRECT   /*LV_DISPLAY_RENDER_MODE_DIRECT is recommended for best performance*/
-    #define LV_SDL_BUF_COUNT       1   /*1 or 2*/
+    #define LV_SDL_BUF_COUNT       1    /*1 or 2*/
     #define LV_SDL_FULLSCREEN      0    /*1: Make the window full screen by default*/
     #define LV_SDL_DIRECT_EXIT     1    /*1: Exit the application when all SDL windows are closed*/
+#endif
+
+/*Use X11 to open window on Linux desktop and handle mouse and keyboard*/
+#define LV_USE_X11              0
+#if LV_USE_X11
+    #define LV_X11_DIRECT_EXIT         1  /*Exit the application when all X11 windows have been closed*/
+    #define LV_X11_DOUBLE_BUFFER       1  /*Use double buffers for endering*/
+    /*select only 1 of the following render modes (LV_X11_RENDER_MODE_PARTIAL preferred!)*/
+    #define LV_X11_RENDER_MODE_PARTIAL 1  /*Partial render mode (preferred)*/
+    #define LV_X11_RENDER_MODE_DIRECT  0  /*direct render mode*/
+    #define LV_X11_RENDER_MODE_FULL    0  /*Full render mode*/
 #endif
 
 /*Driver for /dev/fb*/
@@ -850,6 +876,9 @@
 
 /*Demonstrate scroll settings*/
 #define LV_USE_DEMO_SCROLL          0
+
+/*Vector graphic demo*/
+#define LV_USE_DEMO_VECTOR_GRAPHIC  0
 /*--END OF LV_CONF_H--*/
 
 #endif /*LV_CONF_H*/

@@ -107,8 +107,8 @@ static lv_result_t decoder_info(struct _lv_image_decoder_t * decoder, const void
             header->always_zero = 0;
             header->cf = LV_COLOR_FORMAT_ARGB8888;
             /*The width and height are stored in Big endian format so convert them to little endian*/
-            header->w = (lv_coord_t)((size[0] & 0xff000000) >> 24) + ((size[0] & 0x00ff0000) >> 8);
-            header->h = (lv_coord_t)((size[1] & 0xff000000) >> 24) + ((size[1] & 0x00ff0000) >> 8);
+            header->w = (int32_t)((size[0] & 0xff000000) >> 24) + ((size[0] & 0x00ff0000) >> 8);
+            header->h = (int32_t)((size[1] & 0xff000000) >> 24) + ((size[1] & 0x00ff0000) >> 8);
 
             return LV_RESULT_OK;
         }
@@ -129,14 +129,14 @@ static lv_result_t decoder_info(struct _lv_image_decoder_t * decoder, const void
             header->w = img_dsc->header.w;         /*Save the image width*/
         }
         else {
-            header->w = (lv_coord_t)((size[0] & 0xff000000) >> 24) + ((size[0] & 0x00ff0000) >> 8);
+            header->w = (int32_t)((size[0] & 0xff000000) >> 24) + ((size[0] & 0x00ff0000) >> 8);
         }
 
         if(img_dsc->header.h) {
             header->h = img_dsc->header.h;         /*Save the color height*/
         }
         else {
-            header->h = (lv_coord_t)((size[1] & 0xff000000) >> 24) + ((size[1] & 0x00ff0000) >> 8);
+            header->h = (int32_t)((size[1] & 0xff000000) >> 24) + ((size[1] & 0x00ff0000) >> 8);
         }
 
         return LV_RESULT_OK;
@@ -144,7 +144,6 @@ static lv_result_t decoder_info(struct _lv_image_decoder_t * decoder, const void
 
     return LV_RESULT_INVALID;         /*If didn't succeeded earlier then it's an error*/
 }
-
 
 /**
  * Open a PNG image and decode it into dsc.img_data
@@ -230,7 +229,6 @@ static void decoder_close(lv_image_decoder_t * decoder, lv_image_decoder_dsc_t *
     lv_cache_unlock();
 }
 
-
 static lv_result_t try_cache(lv_image_decoder_dsc_t * dsc)
 {
     lv_cache_lock();
@@ -282,7 +280,6 @@ static const void * decode_png_data(const void * png_data, size_t png_data_size)
     return img_data;
 }
 
-
 /**
  * If the display is not in 32 bit format (ARGB888) then convert the image to the current color depth
  * @param img the ARGB888 image
@@ -300,5 +297,3 @@ static void convert_color_depth(uint8_t * img_p, uint32_t px_cnt)
 }
 
 #endif /*LV_USE_LODEPNG*/
-
-

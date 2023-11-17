@@ -108,7 +108,6 @@ typedef _lv_text_decor_t lv_text_decor_t;
 typedef uint8_t lv_text_decor_t;
 #endif /*DOXYGEN*/
 
-
 /**
  * Selects on which sides border should be drawn
  * 'OR'ed values can be used.
@@ -129,7 +128,6 @@ typedef _lv_border_side_t lv_border_side_t;
 typedef uint8_t lv_border_side_t;
 #endif /*DOXYGEN*/
 
-
 /**
  * The direction of the gradient.
  */
@@ -144,7 +142,6 @@ typedef _lv_grad_dir_t lv_grad_dir_t;
 #else
 typedef uint8_t lv_grad_dir_t;
 #endif /*DOXYGEN*/
-
 
 /** A gradient stop definition.
  *  This matches a color and a position in a virtual 0-255 scale.
@@ -195,7 +192,6 @@ enum _lv_style_prop_t {
 
     LV_STYLE_RADIUS                 = 12,
 
-
     /*Group 1*/
     LV_STYLE_PAD_TOP                = 16,
     LV_STYLE_PAD_BOTTOM             = 17,
@@ -215,7 +211,6 @@ enum _lv_style_prop_t {
     LV_STYLE_BG_COLOR               = 28,
     LV_STYLE_BG_OPA                 = 29,
 
-
     LV_STYLE_BG_GRAD_DIR            = 32,
     LV_STYLE_BG_MAIN_STOP           = 33,
     LV_STYLE_BG_GRAD_STOP           = 34,
@@ -233,7 +228,6 @@ enum _lv_style_prop_t {
 
     LV_STYLE_BG_IMAGE_TILED           = 44,
     LV_STYLE_CLIP_CORNER            = 45,
-
 
     /*Group 3*/
     LV_STYLE_BORDER_WIDTH           = 48,
@@ -253,8 +247,8 @@ enum _lv_style_prop_t {
     LV_STYLE_SHADOW_COLOR           = 61,
     LV_STYLE_SHADOW_OPA             = 62,
 
-    LV_STYLE_SHADOW_OFS_X           = 64,
-    LV_STYLE_SHADOW_OFS_Y           = 65,
+    LV_STYLE_SHADOW_OFFSET_X        = 64,
+    LV_STYLE_SHADOW_OFFSET_Y        = 65,
     LV_STYLE_SHADOW_SPREAD          = 66,
 
     LV_STYLE_IMAGE_OPA                = 68,
@@ -290,7 +284,6 @@ enum _lv_style_prop_t {
     LV_STYLE_COLOR_FILTER_OPA       = 98,
     LV_STYLE_ANIM                   = 99,
     LV_STYLE_ANIM_TIME              = 100,
-    LV_STYLE_ANIM_SPEED             = 101,
     LV_STYLE_TRANSITION             = 102,
     LV_STYLE_BLEND_MODE             = 103,
     LV_STYLE_TRANSFORM_WIDTH        = 104,
@@ -326,7 +319,6 @@ enum _lv_style_prop_t {
 
     _LV_STYLE_LAST_BUILT_IN_PROP     = 128,
 
-
     _LV_STYLE_NUM_BUILT_IN_PROPS     = _LV_STYLE_LAST_BUILT_IN_PROP + 1,
 
     LV_STYLE_PROP_ANY                = 0xFF,
@@ -349,7 +341,6 @@ typedef _lv_style_res_t lv_style_res_t;
 #else
 typedef uint8_t lv_style_res_t;
 #endif /*DOXYGEN*/
-
 
 /**
  * Descriptor for style transitions
@@ -388,7 +379,6 @@ typedef struct {
 /**********************
  * GLOBAL PROTOTYPES
  **********************/
-
 
 /**
  * Initialize a style
@@ -554,16 +544,15 @@ static inline uint32_t _lv_style_get_prop_group(lv_style_prop_t prop)
  */
 uint8_t _lv_style_prop_lookup_flags(lv_style_prop_t prop);
 
-
 #include "lv_style_gen.h"
 
-static inline void lv_style_set_size(lv_style_t * style, lv_coord_t width, lv_coord_t height)
+static inline void lv_style_set_size(lv_style_t * style, int32_t width, int32_t height)
 {
     lv_style_set_width(style, width);
     lv_style_set_height(style, height);
 }
 
-static inline void lv_style_set_pad_all(lv_style_t * style, lv_coord_t value)
+static inline void lv_style_set_pad_all(lv_style_t * style, int32_t value)
 {
     lv_style_set_pad_left(style, value);
     lv_style_set_pad_right(style, value);
@@ -571,25 +560,25 @@ static inline void lv_style_set_pad_all(lv_style_t * style, lv_coord_t value)
     lv_style_set_pad_bottom(style, value);
 }
 
-static inline void lv_style_set_pad_hor(lv_style_t * style, lv_coord_t value)
+static inline void lv_style_set_pad_hor(lv_style_t * style, int32_t value)
 {
     lv_style_set_pad_left(style, value);
     lv_style_set_pad_right(style, value);
 }
 
-static inline void lv_style_set_pad_ver(lv_style_t * style, lv_coord_t value)
+static inline void lv_style_set_pad_ver(lv_style_t * style, int32_t value)
 {
     lv_style_set_pad_top(style, value);
     lv_style_set_pad_bottom(style, value);
 }
 
-static inline void lv_style_set_pad_gap(lv_style_t * style, lv_coord_t value)
+static inline void lv_style_set_pad_gap(lv_style_t * style, int32_t value)
 {
     lv_style_set_pad_row(style, value);
     lv_style_set_pad_column(style, value);
 }
 
-static inline void lv_style_set_transform_scale(lv_style_t * style, lv_coord_t value)
+static inline void lv_style_set_transform_scale(lv_style_t * style, int32_t value)
 {
     lv_style_set_transform_scale_x(style, value);
     lv_style_set_transform_scale_y(style, value);

@@ -105,15 +105,14 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, const void * src, 
         header->always_zero = 0;
         header->cf = LV_COLOR_FORMAT_ARGB8888;
         /*The width and height are stored in Big endian format so convert them to little endian*/
-        header->w = (lv_coord_t)((size[0] & 0xff000000) >> 24) + ((size[0] & 0x00ff0000) >> 8);
-        header->h = (lv_coord_t)((size[1] & 0xff000000) >> 24) + ((size[1] & 0x00ff0000) >> 8);
+        header->w = (int32_t)((size[0] & 0xff000000) >> 24) + ((size[0] & 0x00ff0000) >> 8);
+        header->h = (int32_t)((size[1] & 0xff000000) >> 24) + ((size[1] & 0x00ff0000) >> 8);
 
         return LV_RESULT_OK;
     }
 
     return LV_RESULT_INVALID;         /*If didn't succeeded earlier then it's an error*/
 }
-
 
 /**
  * Open a PNG image and return the decided image

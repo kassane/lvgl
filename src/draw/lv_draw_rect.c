@@ -80,7 +80,6 @@ void lv_draw_bg_image_dsc_init(lv_draw_bg_image_dsc_t * dsc)
     dsc->opa = LV_OPA_COVER;
 }
 
-
 void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords)
 {
 
@@ -94,7 +93,7 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
     if(dsc->shadow_width == 0 ||
        dsc->shadow_opa <= LV_OPA_MIN ||
        (dsc->shadow_width == 1 && dsc->shadow_spread <= 0 &&
-        dsc->shadow_ofs_x == 0 && dsc->shadow_ofs_y == 0)) {
+        dsc->shadow_offset_x == 0 && dsc->shadow_offset_y == 0)) {
         has_shadow = false;
     }
     else {
@@ -139,8 +138,8 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
         shadow_dsc->width = dsc->shadow_width;
         shadow_dsc->spread = dsc->shadow_spread;
         shadow_dsc->opa = dsc->shadow_opa;
-        shadow_dsc->ofs_x = dsc->shadow_ofs_x;
-        shadow_dsc->ofs_y = dsc->shadow_ofs_y;
+        shadow_dsc->ofs_x = dsc->shadow_offset_x;
+        shadow_dsc->ofs_y = dsc->shadow_offset_y;
         shadow_dsc->bg_cover = bg_cover;
         t->type = LV_DRAW_TASK_TYPE_BOX_SHADOW;
         lv_draw_finalize_task_creation(layer, t);
@@ -173,7 +172,6 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
     if(has_bg_img) {
 
         t = lv_draw_add_task(layer, coords);
-
 
         lv_image_src_t src_type = lv_image_src_get_type(dsc->bg_image_src);
         lv_result_t res = LV_RESULT_OK;
@@ -242,7 +240,6 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
 
     LV_PROFILER_END;
 }
-
 
 /**********************
  *   STATIC FUNCTIONS

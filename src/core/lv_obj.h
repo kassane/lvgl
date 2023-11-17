@@ -196,7 +196,7 @@ enum {
 /**
  * Make the base object's class publicly available.
  */
-extern const lv_obj_class_t lv_obj_class;
+LV_ATTRIBUTE_EXTERN_DATA extern const lv_obj_class_t lv_obj_class;
 
 /**
  * Special, rarely used attributes.
@@ -204,15 +204,15 @@ extern const lv_obj_class_t lv_obj_class;
  */
 typedef struct {
     struct _lv_obj_t ** children;       /**< Store the pointer of the children in an array.*/
-    uint32_t child_cnt;                 /**< Number of children*/
     lv_group_t * group_p;
     lv_event_list_t event_list;
 
     lv_point_t scroll;                  /**< The current X/Y scroll offset*/
 
-    lv_coord_t ext_click_pad;           /**< Extra click padding in all direction*/
-    lv_coord_t ext_draw_size;           /**< EXTend the size in every direction for drawing.*/
+    int32_t ext_click_pad;           /**< Extra click padding in all direction*/
+    int32_t ext_draw_size;           /**< EXTend the size in every direction for drawing.*/
 
+    uint16_t child_cnt;                 /**< Number of children*/
     lv_scrollbar_mode_t scrollbar_mode : 2; /**< How to display scrollbars*/
     lv_scroll_snap_t scroll_snap_x : 2;     /**< Where to align the snappable children horizontally*/
     lv_scroll_snap_t scroll_snap_y : 2;     /**< Where to align the snappable children vertically*/
@@ -255,7 +255,6 @@ typedef struct _lv_obj_t {
  * @return          pointer to the new object
  */
 lv_obj_t * lv_obj_create(lv_obj_t * parent);
-
 
 /*=====================
  * Setter functions
@@ -466,7 +465,6 @@ void lv_objid_builtin_destroy(void);
 #else
 #  define LV_TRACE_OBJ_CREATE(...)
 #endif
-
 
 #ifdef __cplusplus
 } /*extern "C"*/

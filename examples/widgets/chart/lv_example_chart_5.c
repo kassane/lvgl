@@ -54,7 +54,6 @@ static void add_faded_area(lv_event_t * e)
     lv_draw_task_t * draw_task = lv_event_get_draw_task(e);
     lv_draw_dsc_base_t * base_dsc = draw_task->draw_dsc;
 
-
     const lv_chart_series_t * ser = lv_chart_get_series_next(obj, NULL);
 
     /*Draw a triangle below the line witch some opacity gradient*/
@@ -70,9 +69,9 @@ static void add_faded_area(lv_event_t * e)
     tri_dsc.p[2].y = LV_MAX(draw_line_dsc->p1_y, draw_line_dsc->p2_y);
     tri_dsc.bg_grad.dir = LV_GRAD_DIR_VER;
 
-    lv_coord_t full_h = lv_obj_get_height(obj);
-    lv_coord_t fract_uppter = (int32_t)(LV_MIN(draw_line_dsc->p1_y, draw_line_dsc->p2_y) - obj->coords.y1) * 255 / full_h;
-    lv_coord_t fract_lower = (int32_t)(LV_MAX(draw_line_dsc->p1_y, draw_line_dsc->p2_y) - obj->coords.y1) * 255 / full_h;
+    int32_t full_h = lv_obj_get_height(obj);
+    int32_t fract_uppter = (int32_t)(LV_MIN(draw_line_dsc->p1_y, draw_line_dsc->p2_y) - obj->coords.y1) * 255 / full_h;
+    int32_t fract_lower = (int32_t)(LV_MAX(draw_line_dsc->p1_y, draw_line_dsc->p2_y) - obj->coords.y1) * 255 / full_h;
     tri_dsc.bg_grad.stops[0].color = ser->color;
     tri_dsc.bg_grad.stops[0].opa = 255 - fract_uppter;
     tri_dsc.bg_grad.stops[0].frac = 0;

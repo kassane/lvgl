@@ -9,6 +9,15 @@
 #include "lv_demo_benchmark.h"
 
 #if LV_USE_DEMO_BENCHMARK
+
+#if LV_FONT_MONTSERRAT_14 == 0
+    #error "LV_FONT_MONTSERRAT_14 is required for lv_demo_benchmark. Enable it in lv_conf.h."
+#endif
+
+#if LV_FONT_MONTSERRAT_24 == 0
+    #error "LV_FONT_MONTSERRAT_24 is required for lv_demo_benchmark. Enable it in lv_conf.h."
+#endif
+
 #include "../../src/display/lv_display_private.h"
 #include "../../src/core/lv_global.h"
 
@@ -36,8 +45,8 @@ static void next_scene_timer_cb(lv_timer_t * timer);
 static void rnd_reset(void);
 static int32_t rnd_next(int32_t min, int32_t max);
 static void shake_anim_y_cb(void * var, int32_t v);
-static void shake_anim(lv_obj_t * obj, lv_coord_t y_max);
-static void scroll_anim(lv_obj_t * obj, lv_coord_t y_max);
+static void shake_anim(lv_obj_t * obj, int32_t y_max);
+static void scroll_anim(lv_obj_t * obj, int32_t y_max);
 static void scroll_anim_y_cb(void * var, int32_t v);
 static void color_anim_cb(void * var, int32_t v);
 static void color_anim(lv_obj_t * obj);
@@ -141,7 +150,6 @@ static void rotated_argb_image_cb(void)
     lv_obj_set_flex_align(lv_screen_active(), LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
     lv_obj_set_style_pad_row(lv_screen_active(), 20, 0);
 
-
     LV_IMG_DECLARE(img_benchmark_cogwheel_argb);
     uint32_t hor_cnt = (lv_display_get_horizontal_resolution(NULL) - 16) / 116;
     uint32_t ver_cnt = (lv_display_get_vertical_resolution(NULL) - 116) / 116;
@@ -232,7 +240,6 @@ static void multiple_arcs_cb(void)
         }
     }
 }
-
 
 static void containers_cb(void)
 {
@@ -416,7 +423,6 @@ void lv_demo_benchmark(void)
  *   STATIC FUNCTIONS
  **********************/
 
-
 static void load_scene(uint32_t scene)
 {
     lv_obj_t * scr = lv_screen_active();
@@ -429,7 +435,6 @@ static void load_scene(uint32_t scene)
     lv_obj_set_layout(scr, LV_LAYOUT_NONE);
     lv_obj_set_flex_align(lv_screen_active(), LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
 
-
     lv_anim_delete(scr, scroll_anim_y_cb);
     lv_anim_delete(scr, shake_anim_y_cb);
     lv_anim_delete(scr, color_anim_cb);
@@ -440,8 +445,6 @@ static void load_scene(uint32_t scene)
     rnd_reset();
     if(scenes[scene].create_cb) scenes[scene].create_cb();
 }
-
-
 
 static void next_scene_timer_cb(lv_timer_t * timer)
 {
@@ -476,7 +479,6 @@ static void sysmon_perf_observer_cb(lv_subject_t * subject, lv_observer_t * obse
 /*----------------
  * SCENE HELPERS
  *----------------*/
-
 
 static void color_anim_cb(void * var, int32_t v)
 {
@@ -522,9 +524,9 @@ static void scroll_anim_y_cb(void * var, int32_t v)
     lv_obj_scroll_to_y(var, v, LV_ANIM_OFF);
 }
 
-static void scroll_anim(lv_obj_t * obj, lv_coord_t y_max)
+static void scroll_anim(lv_obj_t * obj, int32_t y_max)
 {
-    uint32_t t = lv_anim_speed_to_time(lv_display_get_dpi(NULL), 0, y_max);
+    uint32_t t = lv_anim_speed(lv_display_get_dpi(NULL));
 
     lv_anim_t a;
     lv_anim_init(&a);
@@ -542,7 +544,7 @@ static void shake_anim_y_cb(void * var, int32_t v)
     lv_obj_set_style_translate_y(var, v, 0);
 }
 
-static void shake_anim(lv_obj_t * obj, lv_coord_t y_max)
+static void shake_anim(lv_obj_t * obj, int32_t y_max)
 {
     uint32_t t1 = rnd_next(300, 3000);
     uint32_t t2 = rnd_next(300, 3000);
@@ -557,7 +559,6 @@ static void shake_anim(lv_obj_t * obj, lv_coord_t y_max)
     lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
     lv_anim_start(&a);
 }
-
 
 static lv_obj_t * card_create(void)
 {
@@ -585,8 +586,6 @@ static lv_obj_t * card_create(void)
 
     child = lv_label_create(child);
     lv_label_set_text(child, "Connect");
-
-
 
     return panel;
 }

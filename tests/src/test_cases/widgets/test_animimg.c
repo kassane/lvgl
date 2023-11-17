@@ -4,9 +4,9 @@
 #include "unity/unity.h"
 #include "lv_test_indev.h"
 
-LV_IMAGE_DECLARE(test_animimg001)
-LV_IMAGE_DECLARE(test_animimg002)
-LV_IMAGE_DECLARE(test_animimg003)
+LV_IMAGE_DECLARE(test_animimg001);
+LV_IMAGE_DECLARE(test_animimg002);
+LV_IMAGE_DECLARE(test_animimg003);
 
 static const lv_image_dsc_t * anim_imgs[3] = {
     &test_animimg001,
@@ -59,7 +59,6 @@ void test_animimg_get_src(void)
     TEST_ASSERT_EQUAL_PTR(actual_dsc, anim_imgs);
 }
 
-
 void test_animimg_get_src_count(void)
 {
     uint8_t expected_count = 3;
@@ -105,4 +104,3 @@ void test_animimg_start(void)
 }
 
 #endif
-

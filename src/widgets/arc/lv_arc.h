@@ -38,7 +38,6 @@ typedef _lv_arc_mode_t lv_arc_mode_t;
 typedef uint8_t lv_arc_mode_t;
 #endif /*DOXYGEN*/
 
-
 typedef struct {
     lv_obj_t obj;
     uint32_t rotation;
@@ -59,7 +58,7 @@ typedef struct {
     int16_t knob_offset;        /*knob offset from the main arc*/
 } lv_arc_t;
 
-extern const lv_obj_class_t lv_arc_class;
+LV_ATTRIBUTE_EXTERN_DATA extern const lv_obj_class_t lv_arc_class;
 
 /**********************
  * GLOBAL PROTOTYPES
@@ -251,7 +250,7 @@ int32_t lv_arc_get_knob_offset(const lv_obj_t * obj);
  * @param obj_to_align  pointer to an object to align
  * @param r_offset      consider the radius larger with this value (< 0: for smaller radius)
  */
-void lv_arc_align_obj_to_angle(const lv_obj_t * obj, lv_obj_t * obj_to_align, lv_coord_t r_offset);
+void lv_arc_align_obj_to_angle(const lv_obj_t * obj, lv_obj_t * obj_to_align, int32_t r_offset);
 
 /**
  * Rotate an object to the current position of the arc (knob)
@@ -259,7 +258,7 @@ void lv_arc_align_obj_to_angle(const lv_obj_t * obj, lv_obj_t * obj_to_align, lv
  * @param obj_to_rotate  pointer to an object to rotate
  * @param r_offset       consider the radius larger with this value (< 0: for smaller radius)
  */
-void lv_arc_rotate_obj_to_angle(const lv_obj_t * obj, lv_obj_t * obj_to_rotate, lv_coord_t r_offset);
+void lv_arc_rotate_obj_to_angle(const lv_obj_t * obj, lv_obj_t * obj_to_rotate, int32_t r_offset);
 
 /**********************
  *      MACROS

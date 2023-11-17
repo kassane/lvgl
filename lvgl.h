@@ -30,6 +30,7 @@ extern "C" {
 #include "src/misc/lv_log.h"
 #include "src/misc/lv_timer.h"
 #include "src/misc/lv_math.h"
+#include "src/misc/lv_array.h"
 #include "src/misc/lv_async.h"
 #include "src/misc/lv_anim_timeline.h"
 #include "src/misc/lv_profiler_builtin.h"
@@ -43,7 +44,7 @@ extern "C" {
 #include "src/display/lv_display.h"
 
 #include "src/font/lv_font.h"
-#include "src/font/lv_font_loader.h"
+#include "src/font/lv_binfont_loader.h"
 #include "src/font/lv_font_fmt_txt.h"
 
 #include "src/widgets/animimage/lv_animimage.h"
@@ -90,6 +91,7 @@ extern "C" {
 
 #include "src/libs/barcode/lv_barcode.h"
 #include "src/libs/bmp/lv_bmp.h"
+#include "src/libs/rle/lv_rle_decoder.h"
 #include "src/libs/fsdrv/lv_fsdrv.h"
 #include "src/libs/lodepng/lv_lodepng.h"
 #include "src/libs/libpng/lv_libpng.h"
@@ -105,6 +107,7 @@ extern "C" {
 #include "src/layouts/lv_layout.h"
 
 #include "src/draw/lv_draw.h"
+#include "src/draw/lv_draw_vector.h"
 
 #include "src/themes/lv_theme.h"
 
@@ -114,6 +117,8 @@ extern "C" {
 #include "src/dev/sdl/lv_sdl_mouse.h"
 #include "src/dev/sdl/lv_sdl_mousewheel.h"
 #include "src/dev/sdl/lv_sdl_keyboard.h"
+
+#include "src/dev/x11/lv_x11.h"
 
 #include "src/dev/display/drm/lv_linux_drm.h"
 #include "src/dev/display/fb/lv_linux_fbdev.h"

@@ -42,10 +42,9 @@ typedef struct _lv_draw_image_dsc_t {
     const void * src;
     lv_image_header_t header;
 
-
-    lv_coord_t rotation;
-    lv_coord_t zoom_x;
-    lv_coord_t zoom_y;
+    int32_t rotation;
+    int32_t scale_x;
+    int32_t scale_y;
     lv_point_t pivot;
 
     lv_color_t recolor;
@@ -56,6 +55,7 @@ typedef struct _lv_draw_image_dsc_t {
 
     int32_t frame_id;
     uint16_t antialias      : 1;
+    uint16_t tile           : 1;
     lv_draw_image_sup_t * sup;
 } lv_draw_image_dsc_t;
 

@@ -78,6 +78,7 @@
  * - LV_STDLIB_BUILTIN:     LVGL's built in implementation
  * - LV_STDLIB_CLIB:        Standard C functions, like malloc, strlen, etc
  * - LV_STDLIB_MICROPYTHON: MicroPython implementation
+ * - LV_STDLIB_RTTHREAD:    RT-Thread implementation
  * - LV_STDLIB_CUSTOM:      Implement the functions externally
  */
 #ifndef LV_USE_STDLIB_MALLOC
@@ -332,6 +333,8 @@
  * - LV_OS_PTHREAD
  * - LV_OS_FREERTOS
  * - LV_OS_CMSIS_RTOS2
+ * - LV_OS_RTTHREAD
+ * - LV_OS_WINDOWS
  * - LV_OS_CUSTOM */
 #ifndef LV_USE_OS
     #ifdef CONFIG_LV_USE_OS
@@ -876,12 +879,12 @@
     #endif
 #endif
 
-/*Extend the default -32k..32k coordinate range to -4M..4M by using int32_t for coordinates instead of int16_t*/
-#ifndef LV_USE_LARGE_COORD
-    #ifdef CONFIG_LV_USE_LARGE_COORD
-        #define LV_USE_LARGE_COORD CONFIG_LV_USE_LARGE_COORD
+/*Prefix all global extern data with this*/
+#ifndef LV_ATTRIBUTE_EXTERN_DATA
+    #ifdef CONFIG_LV_ATTRIBUTE_EXTERN_DATA
+        #define LV_ATTRIBUTE_EXTERN_DATA CONFIG_LV_ATTRIBUTE_EXTERN_DATA
     #else
-        #define LV_USE_LARGE_COORD 0
+        #define LV_ATTRIBUTE_EXTERN_DATA
     #endif
 #endif
 
@@ -2052,6 +2055,15 @@
     #endif
 #endif
 
+/*RLE decoder library*/
+#ifndef LV_USE_RLE
+    #ifdef CONFIG_LV_USE_RLE
+        #define LV_USE_RLE CONFIG_LV_USE_RLE
+    #else
+        #define LV_USE_RLE 0
+    #endif
+#endif
+
 /*QR code library*/
 #ifndef LV_USE_QRCODE
     #ifdef CONFIG_LV_USE_QRCODE
@@ -2151,6 +2163,33 @@
         #define LV_USE_RLOTTIE CONFIG_LV_USE_RLOTTIE
     #else
         #define LV_USE_RLOTTIE 0
+    #endif
+#endif
+
+/*Enable Vector Graphic APIs*/
+#ifndef LV_USE_VECTOR_GRAPHIC
+    #ifdef CONFIG_LV_USE_VECTOR_GRAPHIC
+        #define LV_USE_VECTOR_GRAPHIC CONFIG_LV_USE_VECTOR_GRAPHIC
+    #else
+        #define LV_USE_VECTOR_GRAPHIC  0
+    #endif
+#endif
+
+/* Enable ThorVG (vector graphics library) from the src/libs folder */
+#ifndef LV_USE_THORVG_INTERNAL
+    #ifdef CONFIG_LV_USE_THORVG_INTERNAL
+        #define LV_USE_THORVG_INTERNAL CONFIG_LV_USE_THORVG_INTERNAL
+    #else
+        #define LV_USE_THORVG_INTERNAL 0
+    #endif
+#endif
+
+/* Enable ThorVG by assuming that its installed and linked to the project */
+#ifndef LV_USE_THORVG_EXTERNAL
+    #ifdef CONFIG_LV_USE_THORVG_EXTERNAL
+        #define LV_USE_THORVG_EXTERNAL CONFIG_LV_USE_THORVG_EXTERNAL
+    #else
+        #define LV_USE_THORVG_EXTERNAL 0
     #endif
 #endif
 
@@ -2462,7 +2501,7 @@
                 #define LV_SDL_BUF_COUNT 0
             #endif
         #else
-            #define LV_SDL_BUF_COUNT       1   /*1 or 2*/
+            #define LV_SDL_BUF_COUNT       1    /*1 or 2*/
         #endif
     #endif
     #ifndef LV_SDL_FULLSCREEN
@@ -2481,6 +2520,65 @@
             #endif
         #else
             #define LV_SDL_DIRECT_EXIT     1    /*1: Exit the application when all SDL windows are closed*/
+        #endif
+    #endif
+#endif
+
+/*Use X11 to open window on Linux desktop and handle mouse and keyboard*/
+#ifndef LV_USE_X11
+    #ifdef CONFIG_LV_USE_X11
+        #define LV_USE_X11 CONFIG_LV_USE_X11
+    #else
+        #define LV_USE_X11              0
+    #endif
+#endif
+#if LV_USE_X11
+    #ifndef LV_X11_DIRECT_EXIT
+        #ifdef _LV_KCONFIG_PRESENT
+            #ifdef CONFIG_LV_X11_DIRECT_EXIT
+                #define LV_X11_DIRECT_EXIT CONFIG_LV_X11_DIRECT_EXIT
+            #else
+                #define LV_X11_DIRECT_EXIT 0
+            #endif
+        #else
+            #define LV_X11_DIRECT_EXIT         1  /*Exit the application when all X11 windows have been closed*/
+        #endif
+    #endif
+    #ifndef LV_X11_DOUBLE_BUFFER
+        #ifdef _LV_KCONFIG_PRESENT
+            #ifdef CONFIG_LV_X11_DOUBLE_BUFFER
+                #define LV_X11_DOUBLE_BUFFER CONFIG_LV_X11_DOUBLE_BUFFER
+            #else
+                #define LV_X11_DOUBLE_BUFFER 0
+            #endif
+        #else
+            #define LV_X11_DOUBLE_BUFFER       1  /*Use double buffers for endering*/
+        #endif
+    #endif
+    /*select only 1 of the following render modes (LV_X11_RENDER_MODE_PARTIAL preferred!)*/
+    #ifndef LV_X11_RENDER_MODE_PARTIAL
+        #ifdef _LV_KCONFIG_PRESENT
+            #ifdef CONFIG_LV_X11_RENDER_MODE_PARTIAL
+                #define LV_X11_RENDER_MODE_PARTIAL CONFIG_LV_X11_RENDER_MODE_PARTIAL
+            #else
+                #define LV_X11_RENDER_MODE_PARTIAL 0
+            #endif
+        #else
+            #define LV_X11_RENDER_MODE_PARTIAL 1  /*Partial render mode (preferred)*/
+        #endif
+    #endif
+    #ifndef LV_X11_RENDER_MODE_DIRECT
+        #ifdef CONFIG_LV_X11_RENDER_MODE_DIRECT
+            #define LV_X11_RENDER_MODE_DIRECT CONFIG_LV_X11_RENDER_MODE_DIRECT
+        #else
+            #define LV_X11_RENDER_MODE_DIRECT  0  /*direct render mode*/
+        #endif
+    #endif
+    #ifndef LV_X11_RENDER_MODE_FULL
+        #ifdef CONFIG_LV_X11_RENDER_MODE_FULL
+            #define LV_X11_RENDER_MODE_FULL CONFIG_LV_X11_RENDER_MODE_FULL
+        #else
+            #define LV_X11_RENDER_MODE_FULL    0  /*Full render mode*/
         #endif
     #endif
 #endif
@@ -2768,6 +2866,15 @@
         #define LV_USE_DEMO_SCROLL CONFIG_LV_USE_DEMO_SCROLL
     #else
         #define LV_USE_DEMO_SCROLL          0
+    #endif
+#endif
+
+/*Vector graphic demo*/
+#ifndef LV_USE_DEMO_VECTOR_GRAPHIC
+    #ifdef CONFIG_LV_USE_DEMO_VECTOR_GRAPHIC
+        #define LV_USE_DEMO_VECTOR_GRAPHIC CONFIG_LV_USE_DEMO_VECTOR_GRAPHIC
+    #else
+        #define LV_USE_DEMO_VECTOR_GRAPHIC  0
     #endif
 #endif
 

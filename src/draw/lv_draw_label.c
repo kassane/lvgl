@@ -60,7 +60,6 @@ void lv_draw_label_dsc_init(lv_draw_label_dsc_t * dsc)
     dsc->bidi_dir = LV_BASE_DIR_LTR;
 }
 
-
 void lv_draw_letter_dsc_init(lv_draw_glyph_dsc_t * dsc)
 {
     lv_memzero(dsc, sizeof(lv_draw_glyph_dsc_t));
@@ -90,8 +89,6 @@ LV_ATTRIBUTE_FAST_MEM void lv_draw_label(lv_layer_t * layer, const lv_draw_label
 
     lv_draw_finalize_task_creation(layer, t);
 }
-
-
 
 LV_ATTRIBUTE_FAST_MEM void lv_draw_letter(lv_layer_t * layer, lv_draw_label_dsc_t * dsc,
                                           const lv_point_t * point, uint32_t unicode_letter)
@@ -240,8 +237,8 @@ void lv_draw_label_iterate_letters(lv_draw_unit_t * draw_unit, const lv_draw_lab
     lv_draw_fill_dsc_t fill_dsc;
     lv_draw_fill_dsc_init(&fill_dsc);
     fill_dsc.opa = dsc->opa;
-    lv_coord_t underline_width = font->underline_thickness ? font->underline_thickness : 1;
-    lv_coord_t line_start_x;
+    int32_t underline_width = font->underline_thickness ? font->underline_thickness : 1;
+    int32_t line_start_x;
     uint32_t i;
     int32_t letter_w;
 
@@ -281,7 +278,7 @@ void lv_draw_label_iterate_letters(lv_draw_unit_t * draw_unit, const lv_draw_lab
             /*Always set the bg_coordinates for placeholder drawing*/
             bg_coords.x1 = pos.x;
             bg_coords.y1 = pos.y;
-            bg_coords.x2 = pos.x + letter_w + dsc->letter_space - 1;
+            bg_coords.x2 = pos.x + letter_w - 1;
             bg_coords.y2 = pos.y + line_height - 1;
 
             if(i >= line_end - line_start) {
@@ -307,8 +304,6 @@ void lv_draw_label_iterate_letters(lv_draw_unit_t * draw_unit, const lv_draw_lab
                 }
             }
 
-
-
             if(sel_start != 0xFFFF && sel_end != 0xFFFF && logical_char_pos >= sel_start && logical_char_pos < sel_end) {
                 draw_letter_dsc.color = dsc->sel_color;
                 fill_dsc.color = dsc->sel_bg_color;
@@ -317,7 +312,6 @@ void lv_draw_label_iterate_letters(lv_draw_unit_t * draw_unit, const lv_draw_lab
             else {
                 draw_letter_dsc.color = dsc->color;
             }
-
 
             draw_letter(draw_unit, &draw_letter_dsc, &pos, font, letter, cb);
 
@@ -359,7 +353,6 @@ void lv_draw_label_iterate_letters(lv_draw_unit_t * draw_unit, const lv_draw_lab
     LV_ASSERT_MEM_INTEGRITY();
 }
 
-
 /**********************
  *   STATIC FUNCTIONS
  **********************/
@@ -394,7 +387,8 @@ static void draw_letter(lv_draw_unit_t * draw_unit, lv_draw_glyph_dsc_t * dsc,  
     letter_coords.y2 = letter_coords.y1 + g.box_h - 1;
 
     /*If the letter is completely out of mask don't draw it*/
-    if(_lv_area_is_out(&letter_coords, draw_unit->clip_area, 0)) {
+    if(_lv_area_is_out(&letter_coords, draw_unit->clip_area, 0) &&
+       _lv_area_is_out(dsc->bg_coords, draw_unit->clip_area, 0)) {
         LV_PROFILER_END;
         return;
     }
@@ -423,4 +417,3 @@ static void draw_letter(lv_draw_unit_t * draw_unit, lv_draw_glyph_dsc_t * dsc,  
     cb(draw_unit, dsc, NULL, NULL);
     LV_PROFILER_END;
 }
-
